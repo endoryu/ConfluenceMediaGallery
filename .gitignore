@@ -1,0 +1,66 @@
+# セーフリスト方式：既定で全て除外し、管理対象だけを ! で許可する
+# gitの規則により、親ディレクトリが除外されていると配下を許可できないため
+# 「ディレクトリを許可 → その直下を除外 → 必要なサブディレクトリを許可」の順で書く
+
+# === 1. ルート直下を全て除外 ===
+/*
+
+# === 2. ルート直下の管理対象ファイル ===
+!/.gitignore
+!/.editorconfig
+!/.nvmrc
+!/CLAUDE.md
+!/CODEOWNERS
+!/README.md
+!/LICENSE
+!/manifest.yml
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/vite.config.ts
+!/vitest.config.ts
+!/playwright.config.ts
+!/eslint.config.js
+!/eslint.config.mjs
+!/.prettierrc
+!/.prettierrc.json
+!/.prettierignore
+
+# === 3. 管理対象ディレクトリ（配下は全て管理） ===
+!/.github/
+!/config/
+!/scripts/
+!/src/
+!/tests/
+!/docs/
+
+# === 4. 部分管理ディレクトリ ===
+# .claude/ は skills/ だけ管理
+!/.claude/
+/.claude/*
+!/.claude/skills/
+
+# test-results/ は cost-guard の JSON report だけ管理（release証跡）
+!/test-results/
+/test-results/*
+!/test-results/cost-guard/
+/test-results/cost-guard/*
+!/test-results/cost-guard/*.json
+
+# === 5. 管理対象ディレクトリ内でも除外するもの（CLAUDE.md §10） ===
+# 許可済みディレクトリ配下に置かれた場合の安全網
+**/node_modules/
+**/.env
+**/.env.*
+**/*.har
+**/*.trace.zip
+**/storageState*.json
+**/auth-state*.json
+**/*.storageState.json
+**/*.pem
+**/*.key
+**/raw/
+**/*.raw.*
+**/.DS_Store
+**/Thumbs.db
+**/*.log
