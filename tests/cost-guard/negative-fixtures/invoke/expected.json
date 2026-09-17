@@ -1,0 +1,5 @@
+{
+  "target": "source",
+  "file": "bad.ts",
+  "expectRule": "FCP-SRC-INVOKE"
+}

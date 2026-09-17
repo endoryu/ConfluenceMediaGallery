@@ -1,0 +1,4 @@
+providers:
+  auth:
+    - key: google
+      type: oauth2

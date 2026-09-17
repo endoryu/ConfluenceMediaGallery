@@ -1,0 +1,5 @@
+{
+  "target": "lockfile",
+  "file": "package-lock.json",
+  "expectRule": "FCP-PKG-COPYLEFT"
+}

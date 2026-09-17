@@ -1,0 +1,10 @@
+modules:
+  macro:
+    - key: media-gallery
+      resource: gallery
+      layout: block
+      resolver:
+        endpoint: bad
+resources:
+  - key: gallery
+    path: dist/gallery

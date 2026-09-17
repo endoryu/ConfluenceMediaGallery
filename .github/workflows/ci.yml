@@ -1,0 +1,33 @@
+# 恒久CI検査(ガイド §13)。GitHub Free・publicリポジトリ・standard runnerのみ。
+# artifact/LFS/package upload、従量runner、continue-on-error は恒久禁止(CLAUDE.md §3)。
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      # verify:cost は manifest/dependency/AST/build/origin 検査、
+      # 負例fixture全件の失敗確認、report完全性(commit SHA・hash)検査を含む
+      - run: npm run verify:cost
+  forge-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npx --yes @forge/cli lint

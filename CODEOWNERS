@@ -1,0 +1,10 @@
+# 保護対象(CLAUDE.md §9)。変更はユーザーの明示承認を要する。
+/CLAUDE.md                              @endoryu
+/CODEOWNERS                             @endoryu
+/manifest.yml                           @endoryu
+/package.json                           @endoryu
+/package-lock.json                      @endoryu
+/config/                                @endoryu
+/scripts/verify-forge-cost-policy.mjs   @endoryu
+/.github/workflows/                     @endoryu
+/docs/operations/cost-surface-register.md @endoryu

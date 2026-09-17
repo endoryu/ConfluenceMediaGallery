@@ -1,0 +1,20 @@
+# Confluence Media Gallery — Forge manifest
+# 方針: V1仕様書 §4.6(block layout、gallery/viewer 2 resource、egress宣言0、licensing未宣言)
+# app.id は WU-1 の forge register(ユーザー承認)後に実IDへ置換する。
+modules:
+  macro:
+    - key: media-gallery
+      title: Media Gallery
+      description: Read-only media gallery for page attachments
+      layout: block
+      resource: gallery
+resources:
+  - key: gallery
+    path: dist/gallery
+  - key: viewer
+    path: dist/viewer
+permissions:
+  scopes:
+    - read:attachment:confluence
+app:
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
