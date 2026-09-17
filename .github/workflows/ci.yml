@@ -24,6 +24,11 @@ jobs:
       - run: npm run verify:cost
   forge-lint:
     runs-on: ubuntu-latest
+    # forge lintは認証必須。ユーザーがGitHub暗号化secretsとして登録(ガイド§10.3)。
+    # 値はログで自動マスクされる。deployは行わない(lint専用)
+    env:
+      FORGE_EMAIL: ${{ secrets.FORGE_EMAIL }}
+      FORGE_API_TOKEN: ${{ secrets.FORGE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
