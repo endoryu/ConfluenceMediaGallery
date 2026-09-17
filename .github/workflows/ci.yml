@@ -10,8 +10,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
       - run: npm ci
@@ -25,9 +25,11 @@ jobs:
   forge-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
       - run: npm ci
+      # 非TTYでのanalytics同意プロンプトを回避(--non-interactiveは恒久禁止のため設定書込で対応)
+      - run: npx --yes @forge/cli settings set usage-analytics false
       - run: npx --yes @forge/cli lint
