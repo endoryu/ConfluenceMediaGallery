@@ -17,7 +17,7 @@ permissions:
   scopes:
     - read:attachment:confluence
 app:
-  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  id: ari:cloud:ecosystem::app/00000000-0000-4000-8000-000000000000
   # スキーマ必須項目。Custom UIのみでFunctionは持たない(宣言はruntime versionの指定であり
   # Forge Functionの使用ではない。使用はcost-guardのFCP-MAN-FUNCTIONで恒久遮断)
   runtime:
