@@ -69,9 +69,19 @@ WU-2(P0-1)の実測で以下が確定した:
 ### §5.2 キャッシュキー — 追記
 
 ```diff
-+thumbキャッシュ添付の命名は `mg-thumb.<attachmentId>.v<version>.w<width>.<jpg|png>` とし、
-+ファイル名だけで対象・版・サイズを一意に判定できるようにする。一覧表示時、この命名規則に
-+一致する添付はグリッドから除外し、対応する元Attachmentのタイル画像として使用する。
++thumbキャッシュ添付の命名は `mg_thumbcache_<attachmentId>_v<version>_w<width>` とし、
++**拡張子を付けない**(誤ダウンロード・誤アップロード・ユーザー画像との混同を防ぐ。
++表示はupload時に設定するContent-Typeで成立し、native <img>は拡張子に依存しない)。
++ファイル名だけで所有者(本アプリ)・対象・版・サイズを一意に判定できる。
++一覧表示時、`mg_thumbcache_` prefixの添付はグリッドから除外し、対応する元Attachmentの
++タイル画像として使用する。同名uploadはConfluence仕様により同一添付の版更新となるため、
++重複生成は「余分な版」に收束し実害を持たない(冪等命名)。
++
++ページ単位の整合データとして `mg_thumbcache_config`(拡張子なし・JSON)を同じ命名系で置く:
++生成済みthumbの台帳(attachmentId→version→widths→生成時刻)、ページ単位の生成無効化フラグ、
++schema version。**正本はあくまで命名規則に基づく添付一覧のスキャン**とし、configは高速化と
++設定の器である(壊れても添付スキャンから再構築可能)。この方式は追加scopeを要しない
++(content propertyを使う場合はwrite:page系scopeが増えるため不採用)。
 ```
 
 ### §6.3 Thumbnailロード — 方針変更
@@ -110,9 +120,11 @@ WU-2(P0-1)の実測で以下が確定した:
 
 ```diff
 +| thumbキャッシュ幅 | 320 / 640 px(長辺fit) |
-+| thumbキャッシュ形式 | JPEG品質0.8。元が透過PNG/GIF/SVGの場合はPNG |
-+| thumb命名規則 | mg-thumb.<attachmentId>.v<version>.w<width>.<ext> |
-+| 旧版thumbのGC | 新版thumb生成成功後、同attachmentIdの旧版thumbをwriterが削除 |
++| thumbキャッシュ形式 | JPEG品質0.8。元が透過PNG/GIF/SVGの場合はPNG(いずれも拡張子なし、Content-Typeで指定) |
++| thumb命名規則 | mg_thumbcache_<attachmentId>_v<version>_w<width>(拡張子なし) |
++| 整合データ | mg_thumbcache_config(JSON、ページごと1つ。台帳+ページ単位無効化フラグ) |
++| 旧版・孤児thumbのGC | writer実行時に命名規則スキャンで検出し削除(新版生成後の旧版、元Attachment消滅分) |
++| 生成の協調 | BroadcastChannelによるclaim(先着1 instance)+冪等命名。claim待ちjitter 50-250ms |
 ```
 
 ## 4. L3(Phase0_Spec)変更diff
@@ -133,8 +145,47 @@ WU-2(P0-1)の実測で以下が確定した:
 - CLAUDE.md冒頭の「読み取り専用アプリ」記述の更新(保護対象。ユーザー承認要)
 - 課金への影響: なし(Forge billable capability使用ゼロ維持。書込みはrequestConfluence)。顧客siteのストレージをthumb分消費する事実をlisting/READMEに明記
 
-## 6. 残リスク
+## 6. 副作用への対策(2026-09-18 ユーザー提案を反映)
+
+| 副作用 | 対策 |
+|---|---|
+| 標準UIでの混同・誤DL/誤UL | `mg_thumbcache_` prefix+**拡張子なし**命名で所有者を明示し、画像として誤操作されない |
+| 同時アクセスの重複生成 | 冪等命名(同名upload=版更新に收束)+BroadcastChannel claim協調(§7.2) |
+| 版更新時の旧版・孤児 | writer実行時の命名規則スキャンでGC(元Attachment消滅分も検出・削除) |
+| watcher通知・検索汚染 | 生成をwriterセッションに限定し頻度を最小化。通知抑制はAPI上不可のため残留(listing明記) |
+| ユーザービリティ | 手動キャッシュクリア(macro内、writer限定表示)+ページ単位の生成無効化フラグ(`mg_thumbcache_config`) |
+| site単位の無効化 | **V1では提供不可**。site全域設定の置き場がForge storage(恒久禁止)以外に存在しないため。ページ単位フラグ+アンインストールで代替し、listingへ明記。V1.1でglobalSettingsモジュール+設定の置き場を再検討 |
+
+## 7. 未決事項の裁定案(2026-09-18 追記)
+
+### 7.1 macro削除後のthumb削除経路 — 自動解決は原理的に不可能
+
+macroがページから消えると、そのページで本アプリのコードが実行される契機が消滅する。実行契機を
+持てるForge Trigger/Functionは恒久禁止のため、**「最後のmacro削除後の自動掃除」は本プロジェクトの
+制約下に解が存在しない**。以下の緩和で受容する:
+
+1. **事前クリア導線**: macro内の「キャッシュをクリア」ボタン(writer限定)を「macroを外す前に押す」
+   運用としてREADME/listingに明記
+2. **手動掃除の容易性**: `mg_thumbcache_` prefixにより標準の添付一覧から一括選別・削除が容易
+3. **再追加時の自己修復**: macroを再追加すれば初回writer実行で台帳再構築・孤児GCが走る
+4. **残骸の定量的軽さ**: thumbは1画像あたり2ファイル・数十KB級。残留しても容量・表示への実害は小さい
+5. (任意・アプリ外)顧客admin向けにConfluence Automationで`mg_thumbcache_`添付を定期削除する
+   レシピを文書提供できる(本アプリの機能ではない)
+
+### 7.2 同一ページへの複数macro配置 — 協調プロトコルで解決
+
+1. **冪等命名が最終防衛線**: 二重生成が起きても同名uploadは版更新に收束し、表示・容量への実害なし
+2. **BroadcastChannel協調**: 同一アプリのmacro iframeは同一originのため、`BroadcastChannel`で
+   instance間通信が可能(ネットワークAPIではなく恒久禁止に非抵触)。生成前に対象attachmentIdの
+   claimを放送し、50-250msのjitter内に先着claimがあれば辞退する。生成結果も放送して他instanceの
+   再取得を省く
+3. **設定の一元化**: 無効化フラグ等はmacro instanceごとではなく`mg_thumbcache_config`(ページごと
+   1つ)に置き、どのinstanceから変更しても全instanceに適用する
+4. 表示自体は各instanceが独立に行う(read側は競合概念がない)
+
+## 8. 残リスク
 
 - G1(CORS)不成立の場合は本proposal失効(P0-8で判定)
 - Marketplace審査でwrite scopeの説明責任が増える(§12の限定記述で対応)
-- 添付一覧のthumb混入は命名規則フィルタで自アプリからは秘匿できるが、**標準UIの添付一覧には見える**(仕様として受容し、listingへ明記)
+- 添付一覧のthumb混入は標準UIに見える+watcher通知は抑制不可(仕様として受容し、listingへ明記)
+- macro削除後の残骸は§7.1の緩和策による受容(自動掃除は不可能)
