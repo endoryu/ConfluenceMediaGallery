@@ -11,6 +11,7 @@ import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-h
 import { DiagnosticsPanel } from '../shared/probe/diagnostics-panel';
 import { mark } from '../shared/probe/marks';
 import { RequestInventory } from '../shared/probe/request-inventory';
+import { runMediaProbe } from './probes/media-probe';
 import { attemptViewerWarmup, runModalProbe } from './probes/modal-probe';
 import { runOriginalProbe } from './probes/original-probe';
 import { runThumbnailProbe } from './probes/thumbnail-probe';
@@ -80,7 +81,12 @@ async function init(): Promise<void> {
         if (action === 'thumbnail') {
           void runThumbnailProbe(probeOutput, item, { api, diagnostics });
         } else if (action === 'original') {
-          void runOriginalProbe(probeOutput, item, { api, diagnostics });
+          // 動画・音声はWU-4のRange/seek probe、画像はWU-3のOriginal probe
+          if (item.kind === 'video' || item.kind === 'audio') {
+            runMediaProbe(probeOutput, item, { api, diagnostics });
+          } else {
+            void runOriginalProbe(probeOutput, item, { api, diagnostics });
+          }
         } else {
           void runModalProbe(probeOutput, item, {
             api,
