@@ -35,6 +35,8 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci
+      # lintはresources(dist/gallery, dist/viewer)の実体を検査するためbuildが必要
+      - run: npm run build
       # 非TTYでのanalytics同意プロンプトを回避(--non-interactiveは恒久禁止のため設定書込で対応)
       - run: npx --yes @forge/cli settings set usage-analytics false
       - run: npx --yes @forge/cli lint
