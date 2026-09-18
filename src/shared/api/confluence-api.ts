@@ -27,6 +27,30 @@ export interface ResponseMeta {
 
 export type ResponseMetaListener = (meta: ResponseMeta) => void;
 
+/**
+ * Thumbnail 302 probe の結果(Phase0_Spec §WU-2 作業1)。
+ * Location は host+path のみ保持する(signed URLのquery除去。CLAUDE.md §10)。
+ */
+export interface RedirectProbeResult {
+  /** manual-302: redirect:manualで302とヘッダーを取得できた / manual-opaque: opaque応答 / followed: redirectが追従された / error */
+  readonly mode: 'manual-302' | 'manual-opaque' | 'followed' | 'error';
+  readonly status: number;
+  readonly locationHostPath?: string;
+  readonly cacheControl?: string;
+  readonly expires?: string;
+  readonly etag?: string;
+  readonly note?: string;
+}
+
+/** WU-2 Thumbnail probe用の拡張。Phase 1へは持ち込まない */
+export interface ThumbnailProbeApi {
+  thumbnailRedirectProbe(
+    attachmentId: string,
+    version: number | undefined,
+    width: number,
+  ): Promise<RedirectProbeResult>;
+}
+
 /** レスポンスから記録対象ヘッダーを抽出する */
 export function extractRateLimitHeaders(headers: {
   get(name: string): string | null;

@@ -4,12 +4,17 @@
  */
 import { requestConfluence } from '@forge/bridge';
 import type { AttachmentDetail, AttachmentPage, AttachmentSummary, UserSummary } from '../types/media';
-import type { ConfluenceApi, ResponseMetaListener } from './confluence-api';
+import type {
+  ConfluenceApi,
+  RedirectProbeResult,
+  ResponseMetaListener,
+  ThumbnailProbeApi,
+} from './confluence-api';
 import { extractRateLimitHeaders } from './confluence-api';
 import type { V2AttachmentJson } from './v2-mapping';
 import { extractCursor, toSummary } from './v2-mapping';
 
-export class ForgeConfluenceApi implements ConfluenceApi {
+export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
   constructor(
     private readonly siteBaseUrl: string,
     private readonly onResponseMeta?: ResponseMetaListener,
@@ -91,6 +96,74 @@ export class ForgeConfluenceApi implements ConfluenceApi {
         typeof u.accountId === 'string' && typeof u.displayName === 'string',
       )
       .map((u) => ({ accountId: u.accountId, displayName: u.displayName }));
+  }
+
+  /** signed URL持込防止: URL文字列からhost+pathのみ抽出する */
+  private stripToHostPath(url: string): string {
+    try {
+      const u = new URL(url, this.siteBaseUrl);
+      return `${u.host}${u.pathname}`;
+    } catch {
+      return url.split('?')[0] ?? url;
+    }
+  }
+
+  async thumbnailRedirectProbe(
+    attachmentId: string,
+    version: number | undefined,
+    width: number,
+  ): Promise<RedirectProbeResult> {
+    const params = new URLSearchParams();
+    if (version !== undefined) params.set('version', String(version));
+    params.set('width', String(width));
+    params.set('height', String(width));
+    const path = `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`;
+    const analyze = (
+      response: { status: number; headers: { get(n: string): string | null } },
+      note?: string,
+    ): RedirectProbeResult => {
+      const result: { -readonly [K in keyof RedirectProbeResult]?: RedirectProbeResult[K] } = {
+        status: response.status,
+      };
+      const cacheControl = response.headers.get('cache-control');
+      const expires = response.headers.get('expires');
+      const etag = response.headers.get('etag');
+      if (cacheControl !== null) result.cacheControl = cacheControl;
+      if (expires !== null) result.expires = expires;
+      if (etag !== null) result.etag = etag;
+      if (note !== undefined) result.note = note;
+      if (response.status >= 300 && response.status < 400) {
+        result.mode = 'manual-302';
+        const location = response.headers.get('location');
+        if (location !== null) result.locationHostPath = this.stripToHostPath(location);
+      } else if (response.status === 0) {
+        result.mode = 'manual-opaque';
+        result.note = `${note ? `${note} / ` : ''}opaque応答のためヘッダー取得不可。DevTools/HARを正本とする`;
+      } else {
+        result.mode = 'followed';
+        result.note = `${note ? `${note} / ` : ''}redirectが追従された。302自体のヘッダーはDevTools/HARを正本とする`;
+      }
+      return result as RedirectProbeResult;
+    };
+    try {
+      const response = await requestConfluence(path, { redirect: 'manual' });
+      this.notify(path, response);
+      return analyze(response);
+    } catch (manualError) {
+      const manualNote = `redirect:manual不可(${manualError instanceof Error ? manualError.message : 'unknown'})`;
+      // fallback: 通常リクエストで追従後の状態を記録する
+      try {
+        const response = await requestConfluence(path);
+        this.notify(path, response);
+        return analyze(response, manualNote);
+      } catch (error) {
+        return {
+          mode: 'error',
+          status: -1,
+          note: `${manualNote} / 通常requestも失敗(${error instanceof Error ? error.message : 'unknown'})`,
+        };
+      }
+    }
   }
 
   thumbnailUrl(attachmentId: string, version: number, width: number): string {

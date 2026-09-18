@@ -9,6 +9,7 @@ import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-h
 import { DiagnosticsPanel } from '../shared/probe/diagnostics-panel';
 import { mark } from '../shared/probe/marks';
 import { RequestInventory } from '../shared/probe/request-inventory';
+import { runThumbnailProbe } from './probes/thumbnail-probe';
 import { renderProbeUi } from './probe-ui';
 
 const diagnostics = new DiagnosticBuffer();
@@ -37,11 +38,20 @@ async function init(): Promise<void> {
     const api = new ForgeConfluenceApi(context.siteBaseUrl, (meta) => {
       panel.recordResponseMeta(meta);
     });
+    const probeOutput = document.createElement('div');
     await renderProbeUi(probeRoot, {
       pageId: context.pageId,
       api,
       diagnostics,
+      onProbe: (action, item) => {
+        if (action === 'thumbnail') {
+          void runThumbnailProbe(probeOutput, item, { api, diagnostics });
+        } else {
+          diagnostics.record('info', `probe未実装: ${action}(WU-3/WU-5で実装)`);
+        }
+      },
     });
+    probeRoot.append(probeOutput);
   } catch (error) {
     diagnostics.record(
       'error',
