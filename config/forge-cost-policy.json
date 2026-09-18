@@ -1,0 +1,120 @@
+{
+  "$comment": "課金防止ハーネスの正の許可リスト。正本: V1仕様書 §4.7.2、ガイド §4.1。変更はユーザーの明示承認と cost-surface-register.md の裁定記録を要する(CLAUDE.md §3・§9)。",
+  "policyVersion": "1.0.0",
+  "manifest": {
+    "allowedTopLevelKeys": ["modules", "resources", "permissions", "app"],
+    "allowedModuleTypes": ["macro"],
+    "macroAllowedKeys": ["key", "title", "description", "icon", "layout", "resource", "categories"],
+    "macroRequiredValues": { "layout": "block" },
+    "allowedResourceKeys": ["gallery", "viewer"],
+    "resourceEntryAllowedKeys": ["key", "path"],
+    "resourcePathPrefix": "dist/",
+    "allowedPermissionKeys": ["scopes"],
+    "allowedScopes": ["read:attachment:confluence", "read:user:confluence"],
+    "allowedAppKeys": ["id", "runtime"],
+    "deniedKeyRules": {
+      "function": "FCP-MAN-FUNCTION",
+      "resolver": "FCP-MAN-RESOLVER",
+      "trigger": "FCP-MAN-TRIGGER",
+      "scheduledTrigger": "FCP-MAN-SCHEDULED-TRIGGER",
+      "consumer": "FCP-MAN-CONSUMER",
+      "webtrigger": "FCP-MAN-WEBTRIGGER",
+      "queue": "FCP-MAN-QUEUE",
+      "queues": "FCP-MAN-QUEUE",
+      "storage": "FCP-MAN-STORAGE",
+      "entities": "FCP-MAN-STORAGE",
+      "sql": "FCP-MAN-SQL",
+      "objectStore": "FCP-MAN-OBJECT-STORE",
+      "container": "FCP-MAN-CONTAINER",
+      "containers": "FCP-MAN-CONTAINER",
+      "llm": "FCP-MAN-LLM",
+      "rovo": "FCP-MAN-ROVO",
+      "rovo:agent": "FCP-MAN-ROVO",
+      "action": "FCP-MAN-ROVO",
+      "remotes": "FCP-MAN-REMOTES",
+      "providers": "FCP-MAN-EXTERNAL-AUTH",
+      "licensing": "FCP-MAN-LICENSING"
+    },
+    "atlassianOriginSuffixes": [".atlassian.com", ".atlassian.net", ".atl-paas.net"]
+  },
+  "dependencies": {
+    "allowedRuntime": ["@forge/bridge"],
+    "$trustedScopesComment": "@forge/* はL2 §0.1が許可する @forge/bridge のAtlassian第一者transitive依存。license表記が非SPDX(Forge Terms)のためSPDX照合を免除する。",
+    "trustedScopes": ["@forge/"],
+    "permissiveLicenses": [
+      "MIT",
+      "ISC",
+      "BSD-2-Clause",
+      "BSD-3-Clause",
+      "0BSD",
+      "Apache-2.0",
+      "BlueOak-1.0.0",
+      "CC0-1.0",
+      "Unlicense",
+      "Zlib",
+      "Python-2.0"
+    ]
+  },
+  "source": {
+    "srcDir": "src",
+    "bridgeAllowedImports": ["requestConfluence", "Modal", "events", "router", "view"],
+    "bridgeAllowedImportDirs": ["src/shared/api"],
+    "handlerEntryFiles": ["src/gallery/main.ts", "src/viewer/main.ts"]
+  },
+  "build": {
+    "distDir": "dist",
+    "allowedUrlPrefixes": []
+  },
+  "ci": {
+    "workflowDir": ".github/workflows",
+    "allowedRunners": ["ubuntu-latest"],
+    "allowedActions": ["actions/checkout", "actions/setup-node"],
+    "bannedRunSubstrings": ["--confirm-scopes", "--non-interactive", "forge deploy -e production"],
+    "planAdjudicationSurface": "ci-repository",
+    "planAdjudicationMaxAgeDays": 31
+  },
+  "register": {
+    "path": "docs/operations/cost-surface-register.md"
+  },
+  "report": {
+    "dir": "test-results/cost-guard"
+  },
+  "fixtures": {
+    "dir": "tests/cost-guard/negative-fixtures",
+    "requiredCategories": [
+      "function",
+      "resolver",
+      "trigger",
+      "scheduledTrigger",
+      "consumer",
+      "webtrigger",
+      "queue",
+      "storage",
+      "sql",
+      "objectStore",
+      "container",
+      "llm",
+      "rovo",
+      "remotes",
+      "externalAuth",
+      "licensing",
+      "wildcardHost",
+      "nonAtlassianOrigin",
+      "runtimeDependency",
+      "fetch",
+      "xhr",
+      "websocket",
+      "eventSource",
+      "sendBeacon",
+      "invoke",
+      "consoleError",
+      "consoleLog",
+      "copyleftLicense",
+      "unknownLicense",
+      "ciPaidRunner",
+      "ciArtifactUpload",
+      "confirmScopes",
+      "globalHandlerCallsConsoleError"
+    ]
+  }
+}

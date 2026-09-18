@@ -1,0 +1,4 @@
+permissions:
+  external:
+    images:
+      - https://cdn.example.com

@@ -1,0 +1,5 @@
+modules:
+  trigger:
+    - key: bad
+      events:
+        - avi:confluence:created:page

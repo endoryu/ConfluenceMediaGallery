@@ -1,0 +1,23 @@
+# Confluence Media Gallery — Forge manifest
+# 方針: V1仕様書 §4.6(block layout、gallery/viewer 2 resource、egress宣言0、licensing未宣言)
+# app.id は forge register(2026-09-18、ユーザー同意のもと登録)による実ID。
+# app.runtime はスキーマ必須項目。Custom UIのみでFunctionは持たない(使用はFCP-MAN-FUNCTIONで恒久遮断)。
+modules:
+  macro:
+    - key: media-gallery
+      title: Media Gallery
+      description: Read-only media gallery for page attachments
+      layout: block
+      resource: gallery
+resources:
+  - key: gallery
+    path: dist/gallery
+  - key: viewer
+    path: dist/viewer
+permissions:
+  scopes:
+    - read:attachment:confluence
+app:
+  id: ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf
+  runtime:
+    name: nodejs22.x

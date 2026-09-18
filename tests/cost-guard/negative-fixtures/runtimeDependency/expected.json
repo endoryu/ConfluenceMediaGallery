@@ -1,0 +1,5 @@
+{
+  "target": "package",
+  "file": "package.json",
+  "expectRule": "FCP-PKG-RUNTIME-DEP"
+}

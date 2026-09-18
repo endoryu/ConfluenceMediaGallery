@@ -1,0 +1,7 @@
+dist/
+local/
+node_modules/
+test-results/
+tests/cost-guard/negative-fixtures/
+package-lock.json
+docs/

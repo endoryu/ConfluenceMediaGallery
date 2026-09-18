@@ -1,0 +1,18 @@
+modules:
+  macro:
+    - key: media-gallery
+      resource: gallery
+      layout: block
+resources:
+  - key: gallery
+    path: dist/gallery
+  - key: viewer
+    path: dist/viewer
+permissions:
+  scopes:
+    - read:attachment:confluence
+app:
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  function:
+    - key: bad
+      handler: index.run

@@ -1,0 +1,42 @@
+{
+  "name": "confluence-media-gallery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only media gallery macro for Confluence Cloud (Forge Custom UI)",
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "verify:cost": "node scripts/verify-forge-cost-policy.mjs",
+    "verify:local": "npm run typecheck && npm run lint && npm run test && npm run build && npm run verify:cost",
+    "verify": "npm run verify:local && forge lint",
+    "audit:usage": "node scripts/snapshot-forge-usage.mjs"
+  },
+  "dependencies": {
+    "@forge/bridge": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "jsdom": "^30.0.1",
+    "prettier": "^3.9.7",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "yaml": "^2.9.1"
+  }
+}

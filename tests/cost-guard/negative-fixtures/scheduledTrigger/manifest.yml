@@ -1,0 +1,4 @@
+modules:
+  scheduledTrigger:
+    - key: bad
+      interval: hour

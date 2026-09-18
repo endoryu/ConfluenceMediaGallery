@@ -1,0 +1,5 @@
+{
+  "target": "manifest",
+  "file": "manifest.yml",
+  "expectRule": "FCP-MAN-REMOTES"
+}

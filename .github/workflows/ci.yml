@@ -1,0 +1,42 @@
+# 恒久CI検査(ガイド §13)。GitHub Free・publicリポジトリ・standard runnerのみ。
+# artifact/LFS/package upload、従量runner、continue-on-error は恒久禁止(CLAUDE.md §3)。
+name: ci
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      # verify:cost は manifest/dependency/AST/build/origin 検査、
+      # 負例fixture全件の失敗確認、report完全性(commit SHA・hash)検査を含む
+      - run: npm run verify:cost
+  forge-lint:
+    runs-on: ubuntu-latest
+    # forge lintは認証必須。ユーザーがGitHub暗号化secretsとして登録(ガイド§10.3)。
+    # 値はログで自動マスクされる。deployは行わない(lint専用)
+    env:
+      FORGE_EMAIL: ${{ secrets.FORGE_EMAIL }}
+      FORGE_API_TOKEN: ${{ secrets.FORGE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      # lintはresources(dist/gallery, dist/viewer)の実体を検査するためbuildが必要
+      - run: npm run build
+      # 非TTYでのanalytics同意プロンプトを回避(--non-interactiveは恒久禁止のため設定書込で対応)
+      - run: npx --yes @forge/cli settings set usage-analytics false
+      - run: npx --yes @forge/cli lint
