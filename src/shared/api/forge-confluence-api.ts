@@ -5,6 +5,7 @@
 import { requestConfluence } from '@forge/bridge';
 import type { AttachmentDetail, AttachmentPage, AttachmentSummary, UserSummary } from '../types/media';
 import type {
+  BinaryFetchOptions,
   BinaryFetchResult,
   ConfluenceApi,
   RedirectProbeResult,
@@ -123,14 +124,18 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     );
   }
 
-  async fetchBinary(path: string): Promise<BinaryFetchResult> {
+  async fetchBinary(path: string, opts?: BinaryFetchOptions): Promise<BinaryFetchResult> {
     try {
-      const response = await requestConfluence(path);
+      const response = await requestConfluence(
+        path,
+        opts?.range ? { headers: { Range: opts.range } } : undefined,
+      );
       this.notify(path, response);
-      if (!response.ok) {
+      if (!(response.ok || response.status === 206)) {
         return { ok: false, status: response.status };
       }
       const contentType = response.headers.get('content-type') ?? undefined;
+      const contentRange = response.headers.get('content-range') ?? undefined;
       let blob: Blob;
       try {
         blob = await response.blob();
@@ -144,6 +149,7 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
         blob,
       };
       if (contentType !== undefined) result.contentType = contentType;
+      if (contentRange !== undefined) result.contentRange = contentRange;
       return result as BinaryFetchResult;
     } catch (error) {
       return {
