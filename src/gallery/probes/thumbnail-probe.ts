@@ -202,6 +202,22 @@ export async function runThumbnailProbe(
   });
   section.append(reloadButton, reloadArea);
 
+  // 4.5 参考: legacy thumbnail経路(/wiki/download/thumbnails/)。
+  // v2 endpointのredirect先が/binary(原寸配信)のため、縮小画像を返す代替経路の有無を確認する
+  try {
+    const origin = new URL(api.thumbnailUrl(item.attachmentId, item.version, 320)).origin;
+    if (origin !== 'null') {
+      const legacyHeading = doc.createElement('h4');
+      legacyHeading.textContent = 'legacy thumbnail経路(参考)';
+      const legacyArea = doc.createElement('div');
+      section.append(legacyHeading, legacyArea);
+      const legacyUrl = `${origin}/wiki/download/thumbnails/${encodeURIComponent(item.pageId)}/${encodeURIComponent(item.title)}`;
+      await loadInto(doc, legacyArea, 'legacy(/wiki/download/thumbnails/)', legacyUrl, loader, diagnostics);
+    }
+  } catch {
+    // origin解決不能(mock等)は参考probeを省略
+  }
+
   // 5. version検証(旧版が存在する場合のみ)
   if (item.version >= 2) {
     const versionHeading = doc.createElement('h4');

@@ -1,0 +1,623 @@
+{
+  "schema": "cost-guard-report/1",
+  "generatedAtUtc": "2026-09-18T14:06:25.650Z",
+  "commitSha": "594fb3bd96f64e26b5966d9bb85324035a306973",
+  "workingTreeDirty": true,
+  "policyVersion": "1.0.0",
+  "policyHash": "6186e9edbebd27b0f2e2ebb2ec18d10e3d6454c35ff7a05fd5c4110a18df8afa",
+  "manifestHash": "0bb5f543685dd92655cf7158bdad37cd9b5b872596c57687840f857d92626f6c",
+  "lockfileHash": "5a87040e095e06b729bdfdbef9c062ec4ad6ab9d06066d8dfc5bb18e6dd27553",
+  "register": {
+    "adjudicationIds": [
+      "CSR-2026-001",
+      "CSR-2026-002",
+      "CSR-2026-003"
+    ],
+    "lastConfirmed": "2026-09-18"
+  },
+  "status": "GREEN",
+  "rules": [
+    {
+      "id": "FCP-MAN-PARSE",
+      "description": "manifest.yml が解析できない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-FUNCTION",
+      "description": "Forge Function の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-RESOLVER",
+      "description": "Resolver の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-TRIGGER",
+      "description": "Trigger の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-SCHEDULED-TRIGGER",
+      "description": "Scheduled Trigger の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-CONSUMER",
+      "description": "consumer の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-WEBTRIGGER",
+      "description": "webtrigger の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-QUEUE",
+      "description": "queue の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-STORAGE",
+      "description": "Forge storage(KVS/Custom Entity Store)の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-SQL",
+      "description": "Forge SQL の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-OBJECT-STORE",
+      "description": "Object Store の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-CONTAINER",
+      "description": "Container の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-LLM",
+      "description": "Forge LLM の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-ROVO",
+      "description": "Rovo module の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-REMOTES",
+      "description": "remotes の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-EXTERNAL-AUTH",
+      "description": "external authentication provider の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-LICENSING",
+      "description": "app.licensing の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-EXTERNAL-PERMISSION",
+      "description": "permissions.external(egress)の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-WILDCARD-HOST",
+      "description": "wildcard host の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-NON-ATLASSIAN-ORIGIN",
+      "description": "非Atlassian origin の宣言",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-UNKNOWN-KEY",
+      "description": "許可リスト外のmanifest key",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-MODULE",
+      "description": "許可リスト外のmodule種別",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-MACRO",
+      "description": "macro定義が許可構成外",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-RESOURCE",
+      "description": "resource定義が許可構成外",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-SCOPE",
+      "description": "許可リスト外のscope",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-MAN-APP",
+      "description": "app定義が許可構成外",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-PKG-RUNTIME-DEP",
+      "description": "@forge/bridge 以外のruntime dependency",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-PKG-COPYLEFT",
+      "description": "copyleft licenseのpackage",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-PKG-LICENSE-UNKNOWN",
+      "description": "license不明・許可リスト外licenseのpackage",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-PKG-LOCK-SYNC",
+      "description": "package.json と package-lock.json の不整合",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-PKG-PARSE",
+      "description": "package.json / package-lock.json が解析できない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-FETCH",
+      "description": "fetch の直接使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-XHR",
+      "description": "XMLHttpRequest の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-WEBSOCKET",
+      "description": "WebSocket の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-EVENTSOURCE",
+      "description": "EventSource の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-SENDBEACON",
+      "description": "sendBeacon の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-INVOKE",
+      "description": "invoke / invokeRemote の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-BRIDGE-API",
+      "description": "許可リスト外の@forge/bridge API import",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-BRIDGE-SCOPE",
+      "description": "src/shared/api 外での@forge/bridge import",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-FORGE-API",
+      "description": "@forge/bridge 以外の@forge/* import",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-EXTERNAL-IMPORT",
+      "description": "外部packageのruntime import",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-CONSOLE-ERROR",
+      "description": "console.error の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-CONSOLE-LOG",
+      "description": "console.log の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-CONSOLE-OTHER",
+      "description": "その他のconsole出力",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-HANDLER-REQUIRED",
+      "description": "global error handler が未登録",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-HANDLER-ENTRY",
+      "description": "entry が global error handler を登録していない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-HANDLER-CONSOLE",
+      "description": "global error handler がconsoleを呼ぶ",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-SRC-HANDLER-RETHROW",
+      "description": "global error handler 登録ファイルにthrowがある",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-BLD-MISSING",
+      "description": "production build 出力が存在しない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-BLD-CONSOLE",
+      "description": "build出力に console.error / console.log が残存",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-BLD-COMM",
+      "description": "build出力に直接通信APIが残存",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-BLD-FORGE-API",
+      "description": "build出力に @forge/bridge 以外の@forge/* 参照",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-BLD-ORIGIN",
+      "description": "build出力に許可リスト外のURL literal",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-MISSING",
+      "description": "CI workflow が存在しない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-PARSE",
+      "description": "CI workflow が解析できない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-RUNNER",
+      "description": "許可リスト外のrunner",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-ARTIFACT-UPLOAD",
+      "description": "artifact / package upload の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-LFS",
+      "description": "LFS の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-RETENTION",
+      "description": "retention 設定の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-UNKNOWN-ACTION",
+      "description": "許可リスト外のaction",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-CONFIRM-SCOPES",
+      "description": "--confirm-scopes / --non-interactive の使用",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-PROD-DEPLOY",
+      "description": "CIからのproduction deploy",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-CI-PLAN",
+      "description": "CI provider planの裁定記録が無効(cost-surface-register.md)",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-FIX-MISSING",
+      "description": "負例fixtureの欠落",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-FIX-MISS",
+      "description": "負例fixtureが期待rule IDで失敗しない",
+      "result": "PASS"
+    },
+    {
+      "id": "FCP-EXEC",
+      "description": "検査が実行不能",
+      "result": "PASS"
+    }
+  ],
+  "findings": [],
+  "fixtures": [
+    {
+      "category": "function",
+      "expectRule": "FCP-MAN-FUNCTION",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-FUNCTION"
+      ]
+    },
+    {
+      "category": "resolver",
+      "expectRule": "FCP-MAN-RESOLVER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-RESOLVER"
+      ]
+    },
+    {
+      "category": "trigger",
+      "expectRule": "FCP-MAN-TRIGGER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-TRIGGER"
+      ]
+    },
+    {
+      "category": "scheduledTrigger",
+      "expectRule": "FCP-MAN-SCHEDULED-TRIGGER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-SCHEDULED-TRIGGER"
+      ]
+    },
+    {
+      "category": "consumer",
+      "expectRule": "FCP-MAN-CONSUMER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-CONSUMER"
+      ]
+    },
+    {
+      "category": "webtrigger",
+      "expectRule": "FCP-MAN-WEBTRIGGER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-WEBTRIGGER"
+      ]
+    },
+    {
+      "category": "queue",
+      "expectRule": "FCP-MAN-QUEUE",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-CONSUMER",
+        "FCP-MAN-QUEUE"
+      ]
+    },
+    {
+      "category": "storage",
+      "expectRule": "FCP-MAN-STORAGE",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-STORAGE"
+      ]
+    },
+    {
+      "category": "sql",
+      "expectRule": "FCP-MAN-SQL",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-SQL"
+      ]
+    },
+    {
+      "category": "objectStore",
+      "expectRule": "FCP-MAN-OBJECT-STORE",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-OBJECT-STORE"
+      ]
+    },
+    {
+      "category": "container",
+      "expectRule": "FCP-MAN-CONTAINER",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-CONTAINER"
+      ]
+    },
+    {
+      "category": "llm",
+      "expectRule": "FCP-MAN-LLM",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-LLM"
+      ]
+    },
+    {
+      "category": "rovo",
+      "expectRule": "FCP-MAN-ROVO",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-ROVO"
+      ]
+    },
+    {
+      "category": "remotes",
+      "expectRule": "FCP-MAN-REMOTES",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-REMOTES"
+      ]
+    },
+    {
+      "category": "externalAuth",
+      "expectRule": "FCP-MAN-EXTERNAL-AUTH",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-EXTERNAL-AUTH"
+      ]
+    },
+    {
+      "category": "licensing",
+      "expectRule": "FCP-MAN-LICENSING",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-LICENSING"
+      ]
+    },
+    {
+      "category": "wildcardHost",
+      "expectRule": "FCP-MAN-WILDCARD-HOST",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-EXTERNAL-PERMISSION",
+        "FCP-MAN-WILDCARD-HOST"
+      ]
+    },
+    {
+      "category": "nonAtlassianOrigin",
+      "expectRule": "FCP-MAN-NON-ATLASSIAN-ORIGIN",
+      "matched": true,
+      "observed": [
+        "FCP-MAN-EXTERNAL-PERMISSION",
+        "FCP-MAN-NON-ATLASSIAN-ORIGIN"
+      ]
+    },
+    {
+      "category": "runtimeDependency",
+      "expectRule": "FCP-PKG-RUNTIME-DEP",
+      "matched": true,
+      "observed": [
+        "FCP-PKG-RUNTIME-DEP"
+      ]
+    },
+    {
+      "category": "fetch",
+      "expectRule": "FCP-SRC-FETCH",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-FETCH"
+      ]
+    },
+    {
+      "category": "xhr",
+      "expectRule": "FCP-SRC-XHR",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-XHR"
+      ]
+    },
+    {
+      "category": "websocket",
+      "expectRule": "FCP-SRC-WEBSOCKET",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-WEBSOCKET"
+      ]
+    },
+    {
+      "category": "eventSource",
+      "expectRule": "FCP-SRC-EVENTSOURCE",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-EVENTSOURCE"
+      ]
+    },
+    {
+      "category": "sendBeacon",
+      "expectRule": "FCP-SRC-SENDBEACON",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-SENDBEACON"
+      ]
+    },
+    {
+      "category": "invoke",
+      "expectRule": "FCP-SRC-INVOKE",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-BRIDGE-SCOPE",
+        "FCP-SRC-INVOKE"
+      ]
+    },
+    {
+      "category": "consoleError",
+      "expectRule": "FCP-SRC-CONSOLE-ERROR",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-CONSOLE-ERROR"
+      ]
+    },
+    {
+      "category": "consoleLog",
+      "expectRule": "FCP-SRC-CONSOLE-LOG",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-CONSOLE-LOG"
+      ]
+    },
+    {
+      "category": "copyleftLicense",
+      "expectRule": "FCP-PKG-COPYLEFT",
+      "matched": true,
+      "observed": [
+        "FCP-PKG-COPYLEFT"
+      ]
+    },
+    {
+      "category": "unknownLicense",
+      "expectRule": "FCP-PKG-LICENSE-UNKNOWN",
+      "matched": true,
+      "observed": [
+        "FCP-PKG-LICENSE-UNKNOWN"
+      ]
+    },
+    {
+      "category": "ciPaidRunner",
+      "expectRule": "FCP-CI-RUNNER",
+      "matched": true,
+      "observed": [
+        "FCP-CI-RUNNER"
+      ]
+    },
+    {
+      "category": "ciArtifactUpload",
+      "expectRule": "FCP-CI-ARTIFACT-UPLOAD",
+      "matched": true,
+      "observed": [
+        "FCP-CI-ARTIFACT-UPLOAD"
+      ]
+    },
+    {
+      "category": "confirmScopes",
+      "expectRule": "FCP-CI-CONFIRM-SCOPES",
+      "matched": true,
+      "observed": [
+        "FCP-CI-CONFIRM-SCOPES"
+      ]
+    },
+    {
+      "category": "globalHandlerCallsConsoleError",
+      "expectRule": "FCP-SRC-HANDLER-CONSOLE",
+      "matched": true,
+      "observed": [
+        "FCP-SRC-CONSOLE-ERROR",
+        "FCP-SRC-HANDLER-CONSOLE"
+      ]
+    }
+  ]
+}
