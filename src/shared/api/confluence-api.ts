@@ -42,13 +42,15 @@ export interface RedirectProbeResult {
   readonly note?: string;
 }
 
-/** WU-2 Thumbnail probe用の拡張。Phase 1へは持ち込まない */
+/** WU-2/WU-3 probe用の拡張。Phase 1へは持ち込まない */
 export interface ThumbnailProbeApi {
   thumbnailRedirectProbe(
     attachmentId: string,
     version: number | undefined,
     width: number,
   ): Promise<RedirectProbeResult>;
+  /** 任意のsite相対pathへのredirect probe(WU-3: v1 download endpoint等) */
+  redirectProbe(pathWithQuery: string): Promise<RedirectProbeResult>;
 }
 
 /** レスポンスから記録対象ヘッダーを抽出する */
