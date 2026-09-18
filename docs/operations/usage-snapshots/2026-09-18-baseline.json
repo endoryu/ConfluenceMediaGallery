@@ -1,0 +1,30 @@
+{
+  "schema": "usage-snapshot/1",
+  "kind": "baseline",
+  "note": "P0-7 / WU-8a baseline。App登録直後・初回deploy前(V1仕様書 §4.7.3)。Developer Consoleの「利用実績なし」の正常な空表示は表示値0と同義に扱う(同§)。screenshot原本は local/(commit対象外)。",
+  "capturedAtUtc": "2026-09-18T11:59:18Z",
+  "period": "2026-09-18(App登録直後)",
+  "appId": "ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf",
+  "developerSpaceId": "60135566-e473-41ab-b5a8-3bd69e0a99fc",
+  "environments": ["development", "staging", "production"],
+  "deployedEnvironments": [],
+  "commitSha": "6edaf090b56189e75a5cbc365dfd351d45d53cb3",
+  "policyVersion": "1.0.0",
+  "metrics": [
+    { "name": "Forge Functions duration", "value": 0, "unit": "GB-seconds" },
+    { "name": "KVS reads", "value": 0, "unit": "GB" },
+    { "name": "KVS writes", "value": 0, "unit": "GB" },
+    { "name": "Logs writes", "value": 0, "unit": "GB" },
+    { "name": "SQL compute duration", "value": 0, "unit": "hour" },
+    { "name": "SQL compute requests", "value": 0, "unit": "requests" },
+    { "name": "SQL data stored", "value": 0, "unit": "GB-hours" },
+    { "name": "Object Store requests", "value": 0, "unit": "requests" },
+    { "name": "Forge LLM input/output", "value": 0, "unit": "credits" },
+    { "name": "Containers compute/memory", "value": 0, "unit": "-" }
+  ],
+  "estimatedCostUsd": 0.0,
+  "paymentMethodRegistered": false,
+  "confirmedBy": "ユーザー(2026-09-18、Developer Console / Billing目視確認、screenshotはlocal/へ保存)",
+  "recordedBy": "Claude Code",
+  "judgement": "GREEN(全メトリクス0または利用実績なし、USD 0.00、支払方法未登録)"
+}
