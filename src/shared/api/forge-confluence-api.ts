@@ -5,6 +5,7 @@
 import { requestConfluence } from '@forge/bridge';
 import type { AttachmentDetail, AttachmentPage, AttachmentSummary, UserSummary } from '../types/media';
 import type {
+  BinaryFetchResult,
   ConfluenceApi,
   RedirectProbeResult,
   ResponseMetaListener,
@@ -120,6 +121,37 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     return this.redirectProbe(
       `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`,
     );
+  }
+
+  async fetchBinary(path: string): Promise<BinaryFetchResult> {
+    try {
+      const response = await requestConfluence(path);
+      this.notify(path, response);
+      if (!response.ok) {
+        return { ok: false, status: response.status };
+      }
+      const contentType = response.headers.get('content-type') ?? undefined;
+      let blob: Blob;
+      try {
+        blob = await response.blob();
+      } catch {
+        const buffer = await response.arrayBuffer();
+        blob = new Blob([buffer], contentType ? { type: contentType } : undefined);
+      }
+      const result: { -readonly [K in keyof BinaryFetchResult]?: BinaryFetchResult[K] } = {
+        ok: true,
+        status: response.status,
+        blob,
+      };
+      if (contentType !== undefined) result.contentType = contentType;
+      return result as BinaryFetchResult;
+    } catch (error) {
+      return {
+        ok: false,
+        status: -1,
+        note: error instanceof Error ? error.message : 'unknown error',
+      };
+    }
   }
 
   async redirectProbe(path: string): Promise<RedirectProbeResult> {

@@ -5,6 +5,7 @@
  */
 import type { AttachmentDetail, AttachmentPage, AttachmentSummary, UserSummary } from '../types/media';
 import type {
+  BinaryFetchResult,
   ConfluenceApi,
   RedirectProbeResult,
   ResponseMetaListener,
@@ -82,6 +83,16 @@ export class MockConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     _width: number,
   ): Promise<RedirectProbeResult> {
     return this.redirectProbe(`thumbnail:${attachmentId}`);
+  }
+
+  async fetchBinary(pathWithQuery: string): Promise<BinaryFetchResult> {
+    await this.simulate(`fetch-binary:${pathWithQuery.split('?')[0]}`);
+    return {
+      ok: true,
+      status: 200,
+      blob: new Blob(['mock-image-bytes'], { type: 'image/png' }),
+      contentType: 'image/png',
+    };
   }
 
   async redirectProbe(pathWithQuery: string): Promise<RedirectProbeResult> {

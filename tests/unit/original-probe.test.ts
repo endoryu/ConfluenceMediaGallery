@@ -55,7 +55,34 @@ describe('runOriginalProbe', () => {
     );
     expect(container.textContent).toContain('manual-302');
     expect(urls.some((u) => u.startsWith('mock://original/page-1/a1'))).toBe(true);
-    expect(urls.some((u) => u.includes('/download/attachments/1/photo.png'))).toBe(true);
+    // downloadLinkは/wikiベース相対として解決される
+    expect(urls.some((u) => u.includes('/wiki/download/attachments/1/photo.png'))).toBe(true);
+  });
+
+  it('G1b(bridge経由blob→縮小)の結果を表示する', async () => {
+    const api = new MockConfluenceApi([makeItem(1)]);
+    const { loader } = stubLoader();
+    const container = document.createElement('div');
+
+    await runOriginalProbe(container, makeItem(1), {
+      api,
+      diagnostics: new DiagnosticBuffer(),
+      loadImage: loader,
+      corsProbe: okCorsProbe,
+      bridgeBlobProbe: () =>
+        Promise.resolve({
+          bytesFetched: true,
+          sourceSize: 999,
+          sourceType: 'image/png',
+          blobObtained: true,
+          blobSize: 111,
+          blobType: 'image/jpeg',
+        }),
+    });
+
+    expect(container.textContent).toContain('G1b');
+    expect(container.textContent).toContain('999 bytes');
+    expect(container.textContent).toContain('111 bytes');
   });
 
   it('downloadLink不在は明示表示する', async () => {

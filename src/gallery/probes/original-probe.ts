@@ -101,15 +101,90 @@ export const defaultCorsProbe: CorsProbe = async (doc, url) => {
   return result as CorsProbeResult;
 };
 
+/** G1b: bridge経由blob→createImageBitmap→canvas縮小→toBlob の結果 */
+export interface BridgeBlobProbeResult {
+  readonly bytesFetched: boolean;
+  readonly sourceSize?: number;
+  readonly sourceType?: string;
+  readonly blobObtained: boolean;
+  readonly blobSize?: number;
+  readonly blobType?: string;
+  readonly note?: string;
+}
+
+export type BridgeBlobProbe = (
+  doc: Document,
+  api: ThumbnailProbeApi,
+  pathWithQuery: string,
+) => Promise<BridgeBlobProbeResult>;
+
+/**
+ * G1b既定実装。cross-origin画像を<img>経由でcanvasへ入れず、
+ * requestConfluenceで取得したBlobからImageBitmapを生成するためtaintしない。
+ */
+export const defaultBridgeBlobProbe: BridgeBlobProbe = async (doc, api, pathWithQuery) => {
+  const result: { -readonly [K in keyof BridgeBlobProbeResult]?: BridgeBlobProbeResult[K] } = {
+    bytesFetched: false,
+    blobObtained: false,
+  };
+  const fetched = await api.fetchBinary(pathWithQuery);
+  if (!fetched.ok || !fetched.blob) {
+    result.note = `bridge取得失敗: status=${fetched.status} ${fetched.note ?? ''}`;
+    return result as BridgeBlobProbeResult;
+  }
+  result.bytesFetched = true;
+  result.sourceSize = fetched.blob.size;
+  if (fetched.contentType !== undefined) result.sourceType = fetched.contentType;
+  try {
+    const bitmap = await createImageBitmap(fetched.blob);
+    const canvas = doc.createElement('canvas');
+    const scale = Math.min(1, 320 / Math.max(1, bitmap.width));
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      result.note = '2d contextが取得できない';
+      return result as BridgeBlobProbeResult;
+    }
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve, reject) => {
+      try {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.8);
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('toBlob failed'));
+      }
+    });
+    if (blob) {
+      result.blobObtained = true;
+      result.blobSize = blob.size;
+      result.blobType = blob.type;
+    } else {
+      result.note = 'toBlobがnullを返した';
+    }
+  } catch (error) {
+    result.note = `decode/縮小失敗: ${error instanceof Error ? `${error.name}: ${error.message}` : 'unknown'}`;
+  }
+  return result as BridgeBlobProbeResult;
+};
+
 export interface OriginalProbeOptions {
   readonly api: ConfluenceApi & ThumbnailProbeApi;
   readonly diagnostics: DiagnosticBuffer;
   readonly loadImage?: ImageLoader;
   readonly corsProbe?: CorsProbe;
+  readonly bridgeBlobProbe?: BridgeBlobProbe;
 }
 
+/**
+ * v2 APIの `_links` は `/wiki` ベース相対のため、`/` 始まりで `/wiki/` 以外は
+ * `<origin>/wiki` を前置して解決する(初回実測で `/wiki` 欠落404を確認)。
+ */
 function absolutize(link: string, baseUrl: string): string {
   try {
+    if (link.startsWith('/') && !link.startsWith('/wiki/')) {
+      return `${new URL(baseUrl).origin}/wiki${link}`;
+    }
     return new URL(link, baseUrl).toString();
   } catch {
     return link;
@@ -128,6 +203,7 @@ export async function runOriginalProbe(
   const doc = container.ownerDocument;
   const loader = options.loadImage ?? nativeImageLoader;
   const corsProbe = options.corsProbe ?? defaultCorsProbe;
+  const bridgeBlobProbe = options.bridgeBlobProbe ?? defaultBridgeBlobProbe;
   const { api, diagnostics } = options;
 
   const section = doc.createElement('section');
@@ -218,5 +294,20 @@ export async function runOriginalProbe(
   diagnostics.record(
     g1.blobObtained ? 'info' : 'error',
     `G1 CORS readback: crossorigin=${g1.crossoriginLoaded} blob=${g1.blobObtained} size=${g1.blobSize ?? '-'} tainted=${g1.taintedError ?? '-'} note=${g1.note ?? '-'} (${stripQuery(v1Url)})`,
+  );
+
+  // 5b. G1b: bridge経由blob→縮小(CORSに依存しない代替経路)
+  const g1bHeading = doc.createElement('h4');
+  g1bHeading.textContent = 'G1b: bridge経由blob→縮小(代替経路)';
+  section.append(g1bHeading);
+  const g1b = await bridgeBlobProbe(doc, api, v1DownloadPath(item));
+  appendKeyValues(doc, section, [
+    ['bytes取得(requestConfluence)', g1b.bytesFetched ? `成立(${g1b.sourceSize ?? '-'} bytes / ${g1b.sourceType ?? '-'})` : '不成立'],
+    ['縮小Blob取得(G1b本体)', g1b.blobObtained ? `成立(${g1b.blobSize ?? '-'} bytes / ${g1b.blobType ?? '-'})` : '不成立'],
+    ['note', g1b.note ?? '-'],
+  ]);
+  diagnostics.record(
+    g1b.blobObtained ? 'info' : 'error',
+    `G1b bridge-blob readback: bytes=${g1b.bytesFetched} src=${g1b.sourceSize ?? '-'} blob=${g1b.blobObtained} out=${g1b.blobSize ?? '-'} note=${g1b.note ?? '-'} (${stripQuery(v1Url)})`,
   );
 }
