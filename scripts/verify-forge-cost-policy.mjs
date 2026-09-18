@@ -495,6 +495,10 @@ export function analyzeBuild(policy) {
     return [finding('FCP-BLD-MISSING', 'UNKNOWN', policy.build.distDir, 'run `npm run build` before verify:cost')];
   }
   for (const file of files) {
+    // @forge/bridge専用vendor chunkは第一者SDK内部のため文字列走査を免除
+    // (policy.build.vendorChunkPrefixes)。自コードのchunkは全面走査する。
+    const base = path.basename(file);
+    if ((policy.build.vendorChunkPrefixes ?? []).some((p) => base.startsWith(p))) continue;
     const text = fs.readFileSync(file, 'utf8');
     const target = rel(file);
     if (/console\s*\.\s*(error|log)\b/.test(text)) {

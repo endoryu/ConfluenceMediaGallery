@@ -69,3 +69,4 @@
 1. Viteのmodulepreload polyfillがproduction buildに `fetch()` を残す → `FCP-BLD-COMM` で検出。`vite.config.ts` で `modulePreload.polyfill: false` として除去(対象ブラウザChrome/Edgeはnative対応)。
 2. `@forge/bridge@7` のtransitive依存 `@forge/*` 5packageのlicense表記が非SPDX(`SEE LICENSE IN LICENSE.txt`、Forge Terms) → L2 §0.1が `@forge/bridge` を明示許可するため、policyの `trustedScopes: ["@forge/"]` としてSPDX照合を免除。第三者packageには適用されない。
 3. `argparse`(transitive)のPython-2.0はpermissiveのため許可リストへ追加。
+4. (WU-1)`@forge/bridge` をbundleすると、SDK内部のconsole出力・通信API参照・`@forge/*`文字列・ドキュメントURLがbuild走査(`FCP-BLD-*`)に検出される。bridgeを専用chunk `vendor-bridge-*` に分離し、そのchunkのみ文字列走査を免除(`policy.build.vendorChunkPrefixes`)。根拠はlicense検査の`trustedScopes`と同じ「L2 §0.1が明示許可する第一者SDK」であること。自コードのchunkは全面走査を維持する。
