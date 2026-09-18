@@ -101,15 +101,150 @@ export const defaultCorsProbe: CorsProbe = async (doc, url) => {
   return result as CorsProbeResult;
 };
 
+/** G1b: bridge経由blob→createImageBitmap→canvas縮小→toBlob の結果 */
+export interface BridgeBlobProbeResult {
+  readonly bytesFetched: boolean;
+  readonly sourceSize?: number;
+  readonly sourceType?: string;
+  readonly blobObtained: boolean;
+  readonly blobSize?: number;
+  readonly blobType?: string;
+  readonly note?: string;
+}
+
+export type BridgeBlobProbe = (
+  doc: Document,
+  api: ThumbnailProbeApi,
+  pathWithQuery: string,
+) => Promise<BridgeBlobProbeResult>;
+
+/**
+ * G1b既定実装。cross-origin画像を<img>経由でcanvasへ入れず、
+ * requestConfluenceで取得したBlobからImageBitmapを生成するためtaintしない。
+ */
+export const defaultBridgeBlobProbe: BridgeBlobProbe = async (doc, api, pathWithQuery) => {
+  const result: { -readonly [K in keyof BridgeBlobProbeResult]?: BridgeBlobProbeResult[K] } = {
+    bytesFetched: false,
+    blobObtained: false,
+  };
+  const fetched = await api.fetchBinary(pathWithQuery);
+  if (!fetched.ok || !fetched.blob) {
+    result.note = `bridge取得失敗: status=${fetched.status} ${fetched.note ?? ''}`;
+    return result as BridgeBlobProbeResult;
+  }
+  result.bytesFetched = true;
+  result.sourceSize = fetched.blob.size;
+  if (fetched.contentType !== undefined) result.sourceType = fetched.contentType;
+  const downscaled = await downscaleToJpegBlob(doc, fetched.blob);
+  if (downscaled.blob) {
+    result.blobObtained = true;
+    result.blobSize = downscaled.blob.size;
+    result.blobType = downscaled.blob.type;
+  } else if (downscaled.note !== undefined) {
+    result.note = downscaled.note;
+  }
+  return result as BridgeBlobProbeResult;
+};
+
+/** Blob→createImageBitmap→canvas縮小→JPEG Blob(taint非発生) */
+export async function downscaleToJpegBlob(
+  doc: Document,
+  source: Blob,
+): Promise<{ blob: Blob | null; note?: string }> {
+  try {
+    const bitmap = await createImageBitmap(source);
+    const canvas = doc.createElement('canvas');
+    const scale = Math.min(1, 320 / Math.max(1, bitmap.width));
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return { blob: null, note: '2d contextが取得できない' };
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve, reject) => {
+      try {
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.8);
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('toBlob failed'));
+      }
+    });
+    return blob ? { blob } : { blob: null, note: 'toBlobがnullを返した' };
+  } catch (error) {
+    return {
+      blob: null,
+      note: `decode/縮小失敗: ${error instanceof Error ? `${error.name}: ${error.message}` : 'unknown'}`,
+    };
+  }
+}
+
+/** G1c: Range分割で全量を取得して結合する(大容量対策) */
+export async function chunkedFetchBinary(
+  api: ThumbnailProbeApi,
+  path: string,
+  onProgress?: (loaded: number, total: number) => void,
+): Promise<{ blob?: Blob; total?: number; chunks?: number; ms: number; note?: string }> {
+  const CHUNK = 4 * 1024 * 1024;
+  const MAX_TOTAL = 128 * 1024 * 1024;
+  const started = performance.now();
+  const done = (extra: { blob?: Blob; total?: number; chunks?: number; note?: string }) => ({
+    ...extra,
+    ms: performance.now() - started,
+  });
+  const first = await api.fetchBinary(path, { range: `bytes=0-${CHUNK - 1}` });
+  if (!first.ok || !first.blob) {
+    return done({ note: `初回chunk失敗: status=${first.status} ${first.note ?? ''}` });
+  }
+  if (first.status !== 206) {
+    return done({ blob: first.blob, total: first.blob.size, chunks: 1, note: 'Range無視(200で全量)' });
+  }
+  const totalMatch = first.contentRange?.match(/\/(\d+)\s*$/);
+  const total = totalMatch?.[1] ? Number(totalMatch[1]) : undefined;
+  if (!total || !Number.isFinite(total)) {
+    return done({ note: `Content-Range不明(${first.contentRange ?? '-'})` });
+  }
+  if (total > MAX_TOTAL) {
+    return done({ note: `total ${total} bytes が試験上限128MBを超過` });
+  }
+  const parts: Blob[] = [first.blob];
+  let offset = first.blob.size;
+  let chunks = 1;
+  while (offset < total) {
+    const end = Math.min(offset + CHUNK, total) - 1;
+    const res = await api.fetchBinary(path, { range: `bytes=${offset}-${end}` });
+    if (!res.ok || !res.blob || res.status !== 206) {
+      return done({ note: `chunk失敗: offset=${offset} status=${res.status} ${res.note ?? ''}` });
+    }
+    parts.push(res.blob);
+    offset += res.blob.size;
+    chunks += 1;
+    onProgress?.(offset, total);
+    if (res.blob.size === 0) return done({ note: `空chunk受領: offset=${offset}` });
+  }
+  const type = first.contentType;
+  return done({
+    blob: new Blob(parts, type ? { type } : undefined),
+    total,
+    chunks,
+  });
+}
+
 export interface OriginalProbeOptions {
   readonly api: ConfluenceApi & ThumbnailProbeApi;
   readonly diagnostics: DiagnosticBuffer;
   readonly loadImage?: ImageLoader;
   readonly corsProbe?: CorsProbe;
+  readonly bridgeBlobProbe?: BridgeBlobProbe;
 }
 
+/**
+ * v2 APIの `_links` は `/wiki` ベース相対のため、`/` 始まりで `/wiki/` 以外は
+ * `<origin>/wiki` を前置して解決する(初回実測で `/wiki` 欠落404を確認)。
+ */
 function absolutize(link: string, baseUrl: string): string {
   try {
+    if (link.startsWith('/') && !link.startsWith('/wiki/')) {
+      return `${new URL(baseUrl).origin}/wiki${link}`;
+    }
     return new URL(link, baseUrl).toString();
   } catch {
     return link;
@@ -128,6 +263,7 @@ export async function runOriginalProbe(
   const doc = container.ownerDocument;
   const loader = options.loadImage ?? nativeImageLoader;
   const corsProbe = options.corsProbe ?? defaultCorsProbe;
+  const bridgeBlobProbe = options.bridgeBlobProbe ?? defaultBridgeBlobProbe;
   const { api, diagnostics } = options;
 
   const section = doc.createElement('section');
@@ -219,4 +355,71 @@ export async function runOriginalProbe(
     g1.blobObtained ? 'info' : 'error',
     `G1 CORS readback: crossorigin=${g1.crossoriginLoaded} blob=${g1.blobObtained} size=${g1.blobSize ?? '-'} tainted=${g1.taintedError ?? '-'} note=${g1.note ?? '-'} (${stripQuery(v1Url)})`,
   );
+
+  // 5b. G1b: bridge経由blob→縮小(CORSに依存しない代替経路)
+  const g1bHeading = doc.createElement('h4');
+  g1bHeading.textContent = 'G1b: bridge経由blob→縮小(代替経路)';
+  section.append(g1bHeading);
+  const g1b = await bridgeBlobProbe(doc, api, v1DownloadPath(item));
+  appendKeyValues(doc, section, [
+    ['bytes取得(requestConfluence)', g1b.bytesFetched ? `成立(${g1b.sourceSize ?? '-'} bytes / ${g1b.sourceType ?? '-'})` : '不成立'],
+    ['縮小Blob取得(G1b本体)', g1b.blobObtained ? `成立(${g1b.blobSize ?? '-'} bytes / ${g1b.blobType ?? '-'})` : '不成立'],
+    ['note', g1b.note ?? '-'],
+  ]);
+  diagnostics.record(
+    g1b.blobObtained ? 'info' : 'error',
+    `G1b bridge-blob readback: bytes=${g1b.bytesFetched} src=${g1b.sourceSize ?? '-'} blob=${g1b.blobObtained} out=${g1b.blobSize ?? '-'} note=${g1b.note ?? '-'} (${stripQuery(v1Url)})`,
+  );
+
+  // 5c. G1c: 大容量対策の判別(Range対応、legacy download経路)
+  const g1cHeading = doc.createElement('h4');
+  g1cHeading.textContent = 'G1c: 大容量対策(Range / legacy download経路)';
+  section.append(g1cHeading);
+  const describeBin = (r: {
+    ok: boolean;
+    status: number;
+    blob?: Blob;
+    contentRange?: string;
+    note?: string;
+  }): string =>
+    r.ok
+      ? `status=${r.status} 受領${r.blob?.size ?? '-'}bytes content-range=${r.contentRange ?? '-'}`
+      : `不成立 status=${r.status} ${r.note ?? ''}`;
+  const rangeHead = await api.fetchBinary(v1DownloadPath(item), { range: 'bytes=0-1023' });
+  const legacyDownloadPath = `/wiki/download/attachments/${encodeURIComponent(item.pageId)}/${encodeURIComponent(item.title)}?version=${item.version}`;
+  const legacyHead = await api.fetchBinary(legacyDownloadPath, { range: 'bytes=0-1023' });
+  appendKeyValues(doc, section, [
+    ['v1 endpoint Range 1KB', describeBin(rangeHead)],
+    ['legacy download Range 1KB', describeBin(legacyHead)],
+  ]);
+  diagnostics.record(
+    'info',
+    `G1c range判別: v1=${describeBin(rangeHead)} / legacy=${describeBin(legacyHead)} (${stripQuery(v1Url)})`,
+  );
+
+  const chunkButton = doc.createElement('button');
+  chunkButton.type = 'button';
+  chunkButton.dataset['action'] = 'g1c-chunked';
+  chunkButton.textContent = '大容量チャンク生成を試す(Range分割→縮小)';
+  const chunkStatus = doc.createElement('p');
+  chunkButton.addEventListener('click', () => {
+    chunkStatus.textContent = 'チャンク取得中…';
+    void (async () => {
+      const fetched = await chunkedFetchBinary(api, v1DownloadPath(item), (loaded, total) => {
+        chunkStatus.textContent = `チャンク取得中… ${loaded}/${total} bytes`;
+      });
+      if (!fetched.blob) {
+        chunkStatus.textContent = `チャンク取得不成立: ${fetched.note ?? '-'}(${fetched.ms.toFixed(0)}ms)`;
+        diagnostics.record('error', `G1c chunked: 不成立 note=${fetched.note ?? '-'} ms=${fetched.ms.toFixed(0)}`);
+        return;
+      }
+      const downscaled = await downscaleToJpegBlob(doc, fetched.blob);
+      chunkStatus.textContent = `取得${fetched.total ?? '-'}bytes(${fetched.chunks ?? '-'}chunk、${fetched.ms.toFixed(0)}ms、note=${fetched.note ?? '-'})→ 縮小${downscaled.blob ? `${downscaled.blob.size}bytes 成立` : `不成立: ${downscaled.note ?? '-'}`}`;
+      diagnostics.record(
+        downscaled.blob ? 'info' : 'error',
+        `G1c chunked: total=${fetched.total ?? '-'} chunks=${fetched.chunks ?? '-'} ms=${fetched.ms.toFixed(0)} out=${downscaled.blob?.size ?? '-'} note=${fetched.note ?? downscaled.note ?? '-'}`,
+      );
+    })();
+  });
+  section.append(chunkButton, chunkStatus);
 }

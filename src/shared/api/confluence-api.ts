@@ -51,6 +51,23 @@ export interface ThumbnailProbeApi {
   ): Promise<RedirectProbeResult>;
   /** 任意のsite相対pathへのredirect probe(WU-3: v1 download endpoint等) */
   redirectProbe(pathWithQuery: string): Promise<RedirectProbeResult>;
+  /** requestConfluence経由でbinaryを取得する(G1b/G1c: bridge経由blob→縮小の成立性確認) */
+  fetchBinary(pathWithQuery: string, opts?: BinaryFetchOptions): Promise<BinaryFetchResult>;
+}
+
+export interface BinaryFetchOptions {
+  /** Rangeヘッダー(例: 'bytes=0-1023')。大容量の分割取得判別(G1c)用 */
+  readonly range?: string;
+}
+
+export interface BinaryFetchResult {
+  readonly ok: boolean;
+  readonly status: number;
+  readonly blob?: Blob;
+  readonly contentType?: string;
+  /** Content-Rangeヘッダー(206時) */
+  readonly contentRange?: string;
+  readonly note?: string;
 }
 
 /** レスポンスから記録対象ヘッダーを抽出する */
