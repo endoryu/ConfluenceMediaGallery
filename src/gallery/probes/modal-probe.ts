@@ -99,24 +99,33 @@ export async function runModalProbe(
  * Gallery自身のURLから '/gallery/' → '/viewer/' の置換で推定した
  * viewer resource URLを非表示iframeでロードする(成立可否自体が計測対象)。
  */
-export function attemptViewerWarmup(doc: Document, diagnostics: DiagnosticBuffer): void {
+export function attemptViewerWarmup(
+  doc: Document,
+  diagnostics: DiagnosticBuffer,
+  statusEl?: HTMLElement,
+): void {
+  const setStatus = (text: string): void => {
+    if (statusEl) statusEl.textContent = text;
+  };
   const href = doc.defaultView?.location.href ?? '';
   const guess = href.replace('/gallery/', '/viewer/');
   if (!href || guess === href) {
     diagnostics.record('error', 'warm-up: viewer URLを推定できない(/gallery/がURLに無い)');
+    setStatus('warm-up: URL推定不可');
     return;
   }
+  setStatus('warm-up: 非表示iframeロード中…');
   const started = performance.now();
   const iframe = doc.createElement('iframe');
   iframe.hidden = true;
   iframe.addEventListener('load', () => {
-    diagnostics.record(
-      'info',
-      `warm-up: 非表示iframe load ${(performance.now() - started).toFixed(0)}ms(中身の成否はDevToolsで確認)`,
-    );
+    const message = `warm-up: 非表示iframe load ${(performance.now() - started).toFixed(0)}ms(中身の成否はDevToolsで確認)`;
+    diagnostics.record('info', message);
+    setStatus(message);
   });
   iframe.addEventListener('error', () => {
     diagnostics.record('error', 'warm-up: 非表示iframe error');
+    setStatus('warm-up: iframe error');
   });
   iframe.src = guess;
   doc.body.append(iframe);
