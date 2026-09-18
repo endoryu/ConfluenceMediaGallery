@@ -43,6 +43,35 @@ async function init(): Promise<void> {
       panel.recordResponseMeta(meta);
     });
     const probeOutput = document.createElement('div');
+
+    // WU-5作業8: Gallery初期ロードと独立にModalを開けることの確認用。
+    // 一覧取得のawaitより前にボタンを描画する(低速回線で一覧待ちの間に押す)
+    const earlyModalButton = document.createElement('button');
+    earlyModalButton.type = 'button';
+    earlyModalButton.textContent = '即時Modalテスト(一覧ロード前でも可)';
+    earlyModalButton.addEventListener('click', () => {
+      void runModalProbe(
+        probeOutput,
+        {
+          attachmentId: 'early-probe',
+          pageId: context.pageId,
+          title: 'early-probe',
+          mediaType: 'image/png',
+          kind: 'image',
+          version: 1,
+        },
+        { api, diagnostics, openModal: openViewerModal, emitEvent: emitProbeEvent, onEvent: onProbeEvent },
+      );
+    });
+    const warmupButton = document.createElement('button');
+    warmupButton.type = 'button';
+    warmupButton.textContent = 'Viewer warm-up試行(非表示iframe)';
+    const warmupStatus = document.createElement('span');
+    warmupButton.addEventListener('click', () =>
+      attemptViewerWarmup(document, diagnostics, warmupStatus),
+    );
+    probeRoot.append(earlyModalButton, warmupButton, warmupStatus, probeOutput);
+
     await renderProbeUi(probeRoot, {
       pageId: context.pageId,
       api,
@@ -63,12 +92,7 @@ async function init(): Promise<void> {
         }
       },
     });
-    // WU-5作業5: Viewer resourceのidle warm-up試行
-    const warmupButton = document.createElement('button');
-    warmupButton.type = 'button';
-    warmupButton.textContent = 'Viewer warm-up試行(非表示iframe)';
-    warmupButton.addEventListener('click', () => attemptViewerWarmup(document, diagnostics));
-    probeRoot.append(warmupButton, probeOutput);
+    // (即時Modal・warm-upボタンは一覧取得前に上で描画済み)
   } catch (error) {
     diagnostics.record(
       'error',
