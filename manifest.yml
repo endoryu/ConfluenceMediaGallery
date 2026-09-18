@@ -1,6 +1,7 @@
 # Confluence Media Gallery — Forge manifest
 # 方針: V1仕様書 §4.6(block layout、gallery/viewer 2 resource、egress宣言0、licensing未宣言)
-# app.id は WU-1 の forge register(ユーザー承認)後に実IDへ置換する。
+# app.id は forge register(2026-09-18、ユーザー同意のもと登録)による実ID。
+# app.runtime はスキーマ必須項目。Custom UIのみでFunctionは持たない(使用はFCP-MAN-FUNCTIONで恒久遮断)。
 modules:
   macro:
     - key: media-gallery
@@ -17,8 +18,6 @@ permissions:
   scopes:
     - read:attachment:confluence
 app:
-  id: ari:cloud:ecosystem::app/00000000-0000-4000-8000-000000000000
-  # スキーマ必須項目。Custom UIのみでFunctionは持たない(宣言はruntime versionの指定であり
-  # Forge Functionの使用ではない。使用はcost-guardのFCP-MAN-FUNCTIONで恒久遮断)
+  id: ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf
   runtime:
     name: nodejs22.x
