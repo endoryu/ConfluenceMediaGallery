@@ -81,7 +81,11 @@ export class MockConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     _version: number | undefined,
     _width: number,
   ): Promise<RedirectProbeResult> {
-    await this.simulate(`redirect-probe:${attachmentId}`);
+    return this.redirectProbe(`thumbnail:${attachmentId}`);
+  }
+
+  async redirectProbe(pathWithQuery: string): Promise<RedirectProbeResult> {
+    await this.simulate(`redirect-probe:${pathWithQuery.split('?')[0]}`);
     return (
       this.behavior.redirectResult ?? {
         mode: 'manual-302',

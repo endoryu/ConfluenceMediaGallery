@@ -117,7 +117,12 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     if (version !== undefined) params.set('version', String(version));
     params.set('width', String(width));
     params.set('height', String(width));
-    const path = `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`;
+    return this.redirectProbe(
+      `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`,
+    );
+  }
+
+  async redirectProbe(path: string): Promise<RedirectProbeResult> {
     const analyze = (
       response: { status: number; headers: { get(n: string): string | null } },
       note?: string,
