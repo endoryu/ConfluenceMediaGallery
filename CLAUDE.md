@@ -1,6 +1,6 @@
 # CLAUDE.md — Confluence Media Gallery
 
-Confluence Cloud向けForge Custom UIマクロ。ページ添付の画像・動画・音声をArtStation風グリッドとFullscreen Viewerで閲覧する読み取り専用アプリ。Atlassian Marketplaceに無料アプリとして公開する。個人開発、費用0原則。
+Confluence Cloud向けForge Custom UIマクロ。ページ添付の画像・動画・音声をArtStation風グリッドとFullscreen Viewerで閲覧するアプリ。書き込みは自己管理のサムネイルキャッシュ添付(`mg_thumbcache_*`)の生成・更新・削除に限る(裁定CSR-2026-004、docs/proposals/2026-09-18_writer-thumbnail-cache.md)。ユーザーコンテンツは変更しない。Atlassian Marketplaceに無料アプリとして公開する。個人開発、費用0原則。
 
 ## §1 役割
 
