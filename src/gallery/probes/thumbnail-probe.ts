@@ -211,8 +211,21 @@ export async function runThumbnailProbe(
       legacyHeading.textContent = 'legacy thumbnail経路(参考)';
       const legacyArea = doc.createElement('div');
       section.append(legacyHeading, legacyArea);
-      const legacyUrl = `${origin}/wiki/download/thumbnails/${encodeURIComponent(item.pageId)}/${encodeURIComponent(item.title)}`;
-      await loadInto(doc, legacyArea, 'legacy(/wiki/download/thumbnails/)', legacyUrl, loader, diagnostics);
+      const legacyBase = `${origin}/wiki/download/thumbnails/${encodeURIComponent(item.pageId)}/${encodeURIComponent(item.title)}`;
+      await loadInto(doc, legacyArea, 'legacy(素)', legacyBase, loader, diagnostics);
+      // サイズ・版パラメータの対応可否(V1 §6.3 bucket・§5.2 版付きURLの成立性判定)
+      await loadInto(doc, legacyArea, 'legacy?width=320', `${legacyBase}?width=320`, loader, diagnostics);
+      await loadInto(doc, legacyArea, 'legacy?width=640', `${legacyBase}?width=640`, loader, diagnostics);
+      if (item.version >= 2) {
+        await loadInto(
+          doc,
+          legacyArea,
+          `legacy?version=${item.version - 1}(旧版)`,
+          `${legacyBase}?version=${item.version - 1}`,
+          loader,
+          diagnostics,
+        );
+      }
     }
   } catch {
     // origin解決不能(mock等)は参考probeを省略
