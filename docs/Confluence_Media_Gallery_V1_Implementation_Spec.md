@@ -57,7 +57,7 @@ V1で固定する主要判断は以下である。
 | Bridge API | `requestConfluence`、`Modal`、`events`、`router`、`view` |
 | runtime dependency | `@forge/bridge` |
 | 通信先 | Confluence siteと、P0-5で確認したAtlassian Media host |
-| データ保存 | ブラウザHTTP cacheとdocument内メモリ |
+| データ保存 | ブラウザHTTP cacheとdocument内メモリ。および顧客site内のthumbキャッシュ添付（Section 5.2命名規則。裁定CSR-2026-004） |
 | ログ出力先 | 画面内の診断バッファ（Section 8.4） |
 | 課金対象capability | 使用0 |
 | Marketplace | 無料掲載。`app.licensing` 未宣言、editions／trialなし |
@@ -119,6 +119,7 @@ Confluence標準の画像表示で生じる、クリック後に高解像度デ�
 | 詳細 | タイトル、説明、種別、解像度、時間、ファイルサイズ、更新者、更新日時、ラベル、Originalを開く／Download |
 | 性能 | hover先読み、隣接Preview先読み、ロード優先度制御 |
 | キャッシュ | バージョン付きキー、LRU、容量制限、ライフサイクル解放 |
+| キャッシュ | writerによる縮小サムネイル添付の生成・書き戻し（編集時+writer閲覧時）、版ズレ検出、原寸fallback（proposals/2026-09-18_writer-thumbnail-cache.md） |
 | 品質 | 空状態、権限不足、削除済み、非対応形式、通信失敗の表示 |
 | 品質 | 詳細パネル内の診断レポート（非永続、sanitize済み、明示操作によるコピー） |
 
@@ -131,7 +132,7 @@ Confluence標準の画像表示で生じる、クリック後に高解像度デ�
 | Masonry配置 | V1.1候補 |
 | 自動スライドショー | V1.1候補 |
 | 全文検索、複合フィルター、ユーザー保存済みビュー | V1.1候補 |
-| Attachmentのアップロード、更新、削除、名称変更 | 別案件 |
+| ユーザーAttachmentのアップロード、更新、削除、名称変更 | 別案件（本アプリが書き込むのは自己管理のthumbキャッシュ添付のみ） |
 | タグ編集、コメント編集、リアクション | 別案件 |
 | Confluence Data Center対応 | 別案件 |
 | 有料化、licensing、editions、trial | 別App ID・別案件（Section 0.1） |
@@ -166,10 +167,11 @@ MIMEが `image/*`、`video/*`、`audio/*` でも、ブラウザが再生でき�
 
 ### 3.3 権限
 
-API呼び出しはログイン中ユーザーとして行い、そのユーザーが閲覧できるAttachmentを表示する。V1は読み取り専用とし、以下のGranular Scopeを使用する。
+API呼び出しはログイン中ユーザーとして行い、そのユーザーが閲覧できるAttachmentを表示する。表示は全ユーザー、thumbキャッシュの生成・書き戻しは書き込み権限を持つユーザーのセッションでのみ行う（権限昇格なし。Forge Functionは引き続き恒久禁止）。以下のGranular Scopeを使用する。
 
 - `read:attachment:confluence`
 - `read:user:confluence`：詳細パネルで更新者の表示名を解決する場合のみ
+- `write:attachment:confluence`：thumbキャッシュ添付の生成・版更新・削除のみに使用する。ユーザーコンテンツの変更には使用しない
 
 Attachment一覧・個別情報・Thumbnail APIは `read:attachment:confluence` を要求する。更新者名は `version.authorId` をユーザー情報へ解決するため、ViewerでCurrent項目が確定しPreview要求を発行した後にバックグラウンド取得する。
 
@@ -234,6 +236,8 @@ hover先読みの目的は、GalleryとViewerで同一のバージョン付きUR
 | Thumbnail／Preview | `GET /wiki/api/v2/attachments/{attachmentId}/thumbnail/download` |
 | Original download URL | `GET /wiki/rest/api/content/{pageId}/child/attachment/{attachmentId}/download`（302）を第一候補とし、一覧レスポンスの `downloadLink` とともにP0-2で検証して正本を確定する |
 | 更新者表示名 | `POST /wiki/api/v2/users-bulk` |
+| thumbキャッシュupload | `POST /wiki/rest/api/content/{pageId}/child/attachment`（新規）／`POST .../attachment/{attachmentId}/data`（版更新） |
+| thumbキャッシュ削除 | `DELETE /wiki/rest/api/content/{attachmentId}`（自己管理thumbのみ） |
 
 Thumbnail endpointは `version`、`width`、`height` を受け取り、302で実データURLへリダイレクトする。Original download endpointも302を返し、`version` を指定できる。実際のメディアURLを `<img>`、`<video>`、`<audio>` から直接ロードできるかは、Section 14のPoCゲートで確定する。
 
@@ -468,6 +472,10 @@ cost-surface registerの有効期間は最終確認から31日とし、請求pla
 
 URLは版ごとに一意にする。Thumbnailとdownload endpointではAPIがサポートする `version` を指定する。リダイレクト後URLを利用する場合、そのURLが版固有であることをPoCで検証する。
 
+thumbキャッシュ添付の命名は `mg_thumbcache_<attachmentId>_v<version>_w<width>` とし、**拡張子を付けない**（誤ダウンロード・誤アップロード・ユーザー画像との混同を防ぐ。表示はupload時に設定するContent-Typeで成立し、native `<img>` は拡張子に依存しない）。ファイル名だけで所有者（本アプリ）・対象・版・サイズを一意に判定できる。一覧表示時、`mg_thumbcache_` prefixの添付はグリッドから除外し、対応する元Attachmentのタイル画像として使用する。同名uploadはConfluence仕様により同一添付の版更新となるため、重複生成は「余分な版」に収束し実害を持たない（冪等命名）。
+
+ページ単位の整合データとして `mg_thumbcache_config`（拡張子なし・JSON）を同じ命名系で置く：生成済みthumbの台帳（attachmentId→version→widths→生成時刻）、ページ単位の生成無効化フラグ、schema version。正本はあくまで命名規則に基づく添付一覧のスキャンとし、configは高速化と設定の器である（壊れても添付スキャンから再構築可能）。この方式は追加scopeを要しない。
+
 ## 6. Gallery機能仕様
 
 ### 6.1 初期化
@@ -503,7 +511,7 @@ V1の既定順序は更新日時の降順、同一日時では `attachmentId` �
 | viewport直近1画面分 | eagerまたは早期lazy、優先度auto |
 | それ以外 | `loading=lazy` + IntersectionObserver、優先度low |
 
-要求サイズはタイルの表示幅 × `devicePixelRatio` 以上となる最小size bucketを選ぶ。上限は640 pxとする。画面密度の変化・リサイズ時に、既に十分なサイズを取得済みなら取得済み画像を維持する。
+タイルはthumbキャッシュ添付（w320/w640）を優先ロードし、存在しない・版が古い場合は原寸を直接表示する（fallback）。要求bucketはタイル表示幅 × `devicePixelRatio` 以上の最小、上限640px。fallback表示中にwriter権限があれば生成・書き戻しを非同期で行い、次回以降の閲覧者に供する。生成処理は性能憲法（Section 13.1）の全項目より下位とし、表示をブロックしない。画面密度の変化・リサイズ時に、既に十分なサイズを取得済みなら取得済み画像を維持する。
 
 ### 6.4 hoverタイトル
 
@@ -855,16 +863,16 @@ Global Poolは全テナント共有のため、自siteが無操作でも他テ�
 
 - Attachment取得は現在ユーザー権限で行う。
 - 通信先はAtlassian siteと許可済みAtlassian Media hostに限る。
-- メディア本文とメタデータの保存先はブラウザHTTP cacheとdocument内メモリに限る。
+- メディア本文とメタデータの保存先はブラウザHTTP cacheとdocument内メモリに限る。例外として、thumbキャッシュ添付（Section 5.2の命名規則に一致するもの）のみ顧客siteのページ添付として保存する。
 - 診断バッファに記録する情報はSection 8.4のsanitize規定に従う。
 - タイトル、コメント、ラベルはtextとして描画する。
 - 診断レポート（Section 8.4）の除外項目：URL、account ID、タイトル、コメント、ラベル、ファイル名、pageId、site hostname。
 - `downloadLink` はAPI由来の同一Atlassian site／許可済みmedia hostのURLを受理する。
 - リダイレクト先hostをallowlist検証する。
-- scopeはSection 3.3の2つとする。
+- scopeはSection 3.3の3つとする。write scopeの用途は自己管理のthumbキャッシュ添付に限定し、ユーザーコンテンツを変更しない。削除対象は命名規則（Section 5.2）に一致する添付のみとする。
 - URLはAPIが返した形のまま使用する。
-- Marketplace listingのPrivacy & Securityタブの記載（保存データなし、外部送信なし、Forge storage不使用、egressなし）と実装を常に一致させ、実装変更時はlistingを同時に更新する。
-- Marketplace審査で求められる各scopeの必要理由（`read:attachment:confluence`：一覧・Thumbnail・Original取得、`read:user:confluence`：更新者表示名の解決）を本仕様Section 3.3から引用できる状態に保つ。
+- Marketplace listingのPrivacy & Securityタブの記載（保存データは顧客site内のthumbキャッシュ添付のみ、外部送信なし、Forge storage不使用、egressなし）と実装を常に一致させ、実装変更時はlistingを同時に更新する。
+- Marketplace審査で求められる各scopeの必要理由（`read:attachment:confluence`：一覧・Thumbnail・Original取得、`read:user:confluence`：更新者表示名の解決、`write:attachment:confluence`：縮小サムネイルキャッシュの生成・版更新・削除）を本仕様Section 3.3から引用できる状態に保つ。
 
 ## 13. 非機能要件
 
@@ -1031,6 +1039,16 @@ Thumbnailは小容量のため、native表示が成立しない場合に限りBl
 - 使用量snapshotとcost-guard reportをcommit SHAへ対応付けられること
 
 合格条件：静的ゲートの正常系・全負例が合格し、実siteで標準テストを実施した後も状態が `GREEN` であること。Usageデータが未更新または取得不能の場合は `UNKNOWN` とし、更新後に再判定した時点で本実装・promotionへ進む。
+
+### P0-8 thumbキャッシュ書き戻し成立性
+
+確認事項：
+
+- `crossorigin` 付きメディアロードと `canvas.toBlob()`（または `OffscreenCanvas.convertToBlob`）の成立（G1）
+- `requestConfluence()` によるattachment新規作成・版更新・削除のroundtrip（G2）
+- 生成thumbのnative `<img>` 表示
+
+合格条件：G1・G2がChromeで成立すること。G1不成立の場合、thumbキャッシュ書き戻し機能を除外し原寸＋メモリ内縮小構成へ戻す（再裁定。proposals/2026-09-18_writer-thumbnail-cache.md）。
 
 ## 15. テスト仕様
 
@@ -1273,6 +1291,12 @@ V1は以下をすべて満たしたとき完了とする。
 | レート制限probe最小間隔 | 30秒。指数バックオフ、上限300秒 |
 | 待機表示の切替閾値 | `Retry-After` 60秒 |
 | 診断バッファ上限 | 50件／document |
+| thumbキャッシュ幅 | 320 / 640 px（長辺fit） |
+| thumbキャッシュ形式 | JPEG品質0.8。元が透過PNG/GIF/SVGの場合はPNG（いずれも拡張子なし、Content-Typeで指定） |
+| thumb命名規則 | `mg_thumbcache_<attachmentId>_v<version>_w<width>`（拡張子なし） |
+| 整合データ | `mg_thumbcache_config`（JSON、ページごと1つ。台帳＋ページ単位無効化フラグ） |
+| 旧版・孤児thumbのGC | writer実行時に命名規則スキャンで検出し削除 |
+| 生成の協調 | BroadcastChannelによるclaim（先着1 instance）。claim待ちjitter 50〜250 ms |
 
 ## 19. 公式資料
 

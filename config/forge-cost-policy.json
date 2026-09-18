@@ -10,7 +10,11 @@
     "resourceEntryAllowedKeys": ["key", "path"],
     "resourcePathPrefix": "dist/",
     "allowedPermissionKeys": ["scopes"],
-    "allowedScopes": ["read:attachment:confluence", "read:user:confluence"],
+    "allowedScopes": [
+      "read:attachment:confluence",
+      "read:user:confluence",
+      "write:attachment:confluence"
+    ],
     "allowedAppKeys": ["id", "runtime"],
     "deniedKeyRules": {
       "function": "FCP-MAN-FUNCTION",

@@ -235,6 +235,7 @@ ThumbnailまたはPreviewをnative image requestで表示できること。
 5. `MG-08-Versioning` でversion更新後、新版が表示されることを確認する。
 6. Gallery側で `<link rel=preload>` または非表示 `<img>` で先読みした後、Modal iframe内の `<img>` で同一URLを表示し、HTTP cache再利用を確認する（WU-5完了後）。
 7. redirect先hostを記録する。
+8. `crossorigin` 付き `<img>` ロードと `canvas.toBlob()` の成立性を確認する（G1。V1仕様書P0-8の前半。proposals/2026-09-18_writer-thumbnail-cache.md）。
 
 **合格条件**（V1仕様書P0-2）
 
@@ -322,6 +323,7 @@ Originalをnative image requestで表示でき、2回目の同一URL表示でネ
 6. `read:user:confluence` を追加したmanifestでdeploy／install upgradeを行い、scope差分表示をユーザーが確認する手順を記録する。users-bulkが通ることを確認する。
 7. `MG-09-Permissions` で、閲覧制限ページ・制限付きAttachmentが権限のあるユーザーにだけ表示されることを、developer siteの第2ユーザーで確認する。
 8. redirect先hostのallowlist検証ロジック（`src/shared/api`）の初期値を確定する。
+9. manifest scopeへ `write:attachment:confluence` を `read:user:confluence` と同時に追加し、upgrade時のscope差分をユーザーが確認する。upload・版更新・削除のroundtrip probe（G2。V1仕様書P0-8の後半）を実施する（proposals/2026-09-18_writer-thumbnail-cache.md）。
 
 **合格条件**（V1仕様書P0-5）
 

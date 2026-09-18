@@ -25,6 +25,7 @@
 | CSR-2026-001 | 2026-09-17 | CS-CI-REPO | GitHub Free plan(アカウント endoryu)。publicリポジトリ・standard runner・無料枠内でCIを運用する | ユーザー申告(2026-09-17の会話)。planは外部から静的確認不能のため裁定記録方式(ガイド§4.1手順5)。リポジトリ作成・push後にActions利用量をBilling画面で再確認する | ユーザー |
 | CSR-2026-002 | 2026-09-18 | CS-CI-REPO | forge lintのCI実行のため、Atlassian APIトークンをGitHub暗号化secrets(FORGE_EMAIL / FORGE_API_TOKEN)として登録・使用する | ガイド§10.3の経路。lint専用でCIからのdeployはなし。secretsはユーザーがGitHub UIで直接登録しClaude Codeを経由しない。会話に貼付された初代tokenは失効済み(2026-09-17) | ユーザー |
 | CSR-2026-003 | 2026-09-18 | CS-FREE-SITE | 【INCIDENT-001】個人site(ryuendo.atlassian.net)にPremium 30日トライアル(終了予定10/17、請求予定JPY 1,810)を検出し即時停止(CLAUDE.md §5)。ユーザーがFreeへ変更し解消、`GREEN`復帰 | Forge操作起因ではないことを確認(本アプリのinstall先はryu-devのみ=forge install list証跡。Forge CLIはsite planに作用しない)。トライアル開始は09/17と逆算されプロジェクト操作以前=site作成時の標準signup既定トライアルと推定。実請求0(支払方法は一貫してNone) | ユーザー |
+| CSR-2026-004 | 2026-09-18 | CS-MARKETPLACE / policy | 読み取り専用根幹の変更: writerアプリ化(`write:attachment:confluence`追加、用途は自己管理thumbキャッシュ添付に限定)と、恒久方針のデータ保存への「顧客site内thumbキャッシュ添付」追記。policy allowedScopesへ同scopeを追加 | ユーザー裁定(2026-09-18)。根拠: 縮小サムネイル経路の不存在(P0-1実測)と性能憲法違反の見込み。詳細・前提ゲート(G1/G2)は docs/proposals/2026-09-18_writer-thumbnail-cache.md。課金面への影響なし(Forge billable使用ゼロ維持) | ユーザー |
 
 ## 3. 機械可読ブロック
 
@@ -46,6 +47,11 @@ adjudications:
   - id: CSR-2026-003
     surface: free-site
     decision: INCIDENT-001 Premium trial on personal site resolved by user downgrade to Free; not caused by Forge operations; no payment method ever registered
+    date: 2026-09-18
+    confirmedBy: user
+  - id: CSR-2026-004
+    surface: policy
+    decision: App changed from read-only to writer (write:attachment:confluence for self-managed thumb cache attachments only); policy allowedScopes updated; permanent-policy data-storage row amended (proposals/2026-09-18_writer-thumbnail-cache.md)
     date: 2026-09-18
     confirmedBy: user
 -->
