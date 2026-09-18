@@ -2,13 +2,16 @@
  * Gallery entry(WU-1: probe app骨格)。
  * macro contextからpageId/siteUrlを取得し、Attachment一覧のprobe UIを表示する。
  */
+import { emitProbeEvent, onProbeEvent } from '../shared/api/bridge-events';
 import { getMacroContext } from '../shared/api/macro-context';
 import { ForgeConfluenceApi } from '../shared/api/forge-confluence-api';
+import { openViewerModal } from '../shared/api/viewer-modal';
 import { DiagnosticBuffer } from '../shared/diagnostics/diagnostic-buffer';
 import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-handler';
 import { DiagnosticsPanel } from '../shared/probe/diagnostics-panel';
 import { mark } from '../shared/probe/marks';
 import { RequestInventory } from '../shared/probe/request-inventory';
+import { attemptViewerWarmup, runModalProbe } from './probes/modal-probe';
 import { runOriginalProbe } from './probes/original-probe';
 import { runThumbnailProbe } from './probes/thumbnail-probe';
 import { renderProbeUi } from './probe-ui';
@@ -50,11 +53,22 @@ async function init(): Promise<void> {
         } else if (action === 'original') {
           void runOriginalProbe(probeOutput, item, { api, diagnostics });
         } else {
-          diagnostics.record('info', `probe未実装: ${action}(WU-5で実装)`);
+          void runModalProbe(probeOutput, item, {
+            api,
+            diagnostics,
+            openModal: openViewerModal,
+            emitEvent: emitProbeEvent,
+            onEvent: onProbeEvent,
+          });
         }
       },
     });
-    probeRoot.append(probeOutput);
+    // WU-5作業5: Viewer resourceのidle warm-up試行
+    const warmupButton = document.createElement('button');
+    warmupButton.type = 'button';
+    warmupButton.textContent = 'Viewer warm-up試行(非表示iframe)';
+    warmupButton.addEventListener('click', () => attemptViewerWarmup(document, diagnostics));
+    probeRoot.append(warmupButton, probeOutput);
   } catch (error) {
     diagnostics.record(
       'error',
