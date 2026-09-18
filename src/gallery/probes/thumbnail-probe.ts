@@ -76,10 +76,10 @@ function stripQuery(url: string): string {
   }
 }
 
-function withoutVersionParam(url: string): string {
+function withoutParam(url: string, param: string): string {
   try {
     const u = new URL(url);
-    u.searchParams.delete('version');
+    u.searchParams.delete(param);
     return u.toString();
   } catch {
     return url;
@@ -158,15 +158,36 @@ export async function runThumbnailProbe(
   ]);
   diagnostics.record(
     'info',
-    `thumbnail redirect probe: mode=${redirect.mode} status=${redirect.status} location=${redirect.locationHostPath ?? '-'} cache-control=${redirect.cacheControl ?? '-'}`,
+    `thumbnail redirect probe: mode=${redirect.mode} status=${redirect.status} location=${redirect.locationHostPath ?? '-'} cache-control=${redirect.cacheControl ?? '-'} etag=${redirect.etag ?? '-'} note=${redirect.note ?? '-'}`,
   );
 
   // 2/4. native <img> 表示と width 320/640 の実寸
   const sizeArea = doc.createElement('div');
   section.append(sizeArea);
+  const sizeResults: ImageLoadResult[] = [];
   for (const width of THUMBNAIL_WIDTH_CANDIDATES) {
     const url = api.thumbnailUrl(item.attachmentId, item.version, width);
-    await loadInto(doc, sizeArea, `width=${width}`, url, loader, diagnostics);
+    sizeResults.push(await loadInto(doc, sizeArea, `width=${width}`, url, loader, diagnostics));
+  }
+  // widthのみ(heightなし)の変則も記録し、パラメータ反映の切り分けに使う
+  const widthOnlyUrl = withoutParam(
+    api.thumbnailUrl(item.attachmentId, item.version, THUMBNAIL_WIDTH_CANDIDATES[0]),
+    'height',
+  );
+  await loadInto(doc, sizeArea, `width=320のみ(heightなし)`, widthOnlyUrl, loader, diagnostics);
+  const [r320, r640] = sizeResults;
+  if (
+    r320 &&
+    r640 &&
+    r320.ok &&
+    r640.ok &&
+    r320.naturalWidth === r640.naturalWidth &&
+    r320.naturalWidth > THUMBNAIL_WIDTH_CANDIDATES[1]
+  ) {
+    diagnostics.record(
+      'info',
+      `width/height未反映の疑い: 320/640要求に対しnaturalが同一(${r320.naturalWidth}x${r320.naturalHeight})。302 Locationのquery(DevTools)で切り分ける`,
+    );
   }
 
   // 3. 同一URL再読込(HTTP cache確認。Size列の正本はDevTools)
@@ -205,7 +226,7 @@ export async function runThumbnailProbe(
       doc,
       versionArea,
       'versionなし',
-      withoutVersionParam(currentUrl),
+      withoutParam(currentUrl, 'version'),
       loader,
       diagnostics,
     );

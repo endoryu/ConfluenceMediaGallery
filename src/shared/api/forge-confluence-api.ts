@@ -118,9 +118,10 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     params.set('width', String(width));
     params.set('height', String(width));
     const path = `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`;
-    try {
-      const response = await requestConfluence(path, { redirect: 'manual' });
-      this.notify(path, response);
+    const analyze = (
+      response: { status: number; headers: { get(n: string): string | null } },
+      note?: string,
+    ): RedirectProbeResult => {
       const result: { -readonly [K in keyof RedirectProbeResult]?: RedirectProbeResult[K] } = {
         status: response.status,
       };
@@ -130,24 +131,38 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
       if (cacheControl !== null) result.cacheControl = cacheControl;
       if (expires !== null) result.expires = expires;
       if (etag !== null) result.etag = etag;
+      if (note !== undefined) result.note = note;
       if (response.status >= 300 && response.status < 400) {
         result.mode = 'manual-302';
         const location = response.headers.get('location');
         if (location !== null) result.locationHostPath = this.stripToHostPath(location);
       } else if (response.status === 0) {
         result.mode = 'manual-opaque';
-        result.note = 'opaque応答のためヘッダー取得不可。DevTools/HARを正本とする';
+        result.note = `${note ? `${note} / ` : ''}opaque応答のためヘッダー取得不可。DevTools/HARを正本とする`;
       } else {
         result.mode = 'followed';
-        result.note = 'redirectが追従された。302自体のヘッダーはDevTools/HARを正本とする';
+        result.note = `${note ? `${note} / ` : ''}redirectが追従された。302自体のヘッダーはDevTools/HARを正本とする`;
       }
       return result as RedirectProbeResult;
-    } catch (error) {
-      return {
-        mode: 'error',
-        status: -1,
-        note: error instanceof Error ? error.message : 'unknown error',
-      };
+    };
+    try {
+      const response = await requestConfluence(path, { redirect: 'manual' });
+      this.notify(path, response);
+      return analyze(response);
+    } catch (manualError) {
+      const manualNote = `redirect:manual不可(${manualError instanceof Error ? manualError.message : 'unknown'})`;
+      // fallback: 通常リクエストで追従後の状態を記録する
+      try {
+        const response = await requestConfluence(path);
+        this.notify(path, response);
+        return analyze(response, manualNote);
+      } catch (error) {
+        return {
+          mode: 'error',
+          status: -1,
+          note: `${manualNote} / 通常requestも失敗(${error instanceof Error ? error.message : 'unknown'})`,
+        };
+      }
     }
   }
 
