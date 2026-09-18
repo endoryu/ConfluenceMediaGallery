@@ -3,7 +3,7 @@
 - 計測日: 2026-09-18
 - commit: 0a1f551(probe v2.5.0系列。実装経緯は4ca43e0→594fb3b→f56f8c9→0a1f551)
 - 環境: deploy済みdevelopment(ryu-dev.atlassian.net)
-- ブラウザ: Chrome 152.0.7977.83(**Edgeは未実施**、下記)
+- ブラウザ: Chrome 152.0.7977.83 / Edge 153.0.4234.32(64bit)
 - DPR: 1 / 画面解像度: 未記録 / ネットワークprofile: **スロットリング未適用**(時間系数値は参考値。合否判定は条件非依存の項目で実施)
 - テストデータ: `MG-08-Versioning`(pageId 196658)att196666 = JPEG、4版(v1/v2=1498×1811、v3/v4=960×1200、原本202kB級)
 
@@ -28,6 +28,15 @@
 - mediaの縮小endpoint(`/file/{id}/image`)は署名tokenを自前生成できず利用不可(Confluence本体のインライン極小サムネイルはこの経路)
 - 外部proxy/CDNによる縮小は恒久禁止(CLAUDE.md §3)
 
+## Edge確認(短縮項目)
+
+Chromeで確定済みの302ヘッダー・version・width系は省略し、ブラウザ差が出得る2点のみ実施(2026-09-18、Edge 153.0.4234.32):
+
+| 項目 | 結果 |
+|---|---|
+| native `<img>`表示 | **成立** |
+| 同一URL再読込のcache(DevToolsに新規行なし) | **成立** |
+
 ## 上申事項
 
 - **ESC-WU2-01**(続行): Thumbnail=原寸配信を前提とした設計改訂。詳細はWU完了報告の上申キュー参照。V1仕様書 §6.3(size bucket)・§7.5(Preview)・§18(Thumbnail最大幅)・§4.5.4(ポイント基準)へ影響。改訂案はWU-10で`docs/proposals/`へ
@@ -35,7 +44,7 @@
 
 ## 未実施と理由
 
-- **Edge**: 未実施。Chrome分の判定確定を優先した。短縮手順(表示可否・cache挙動・1クリック)で別途実施する
+- Edgeの302ヘッダー・version・width検証: ブラウザ非依存の事項(サーバー挙動)でChromeで確定済みのため省略
 - スロットリング適用条件での時間計測: 合否に影響しないため未実施。WU-7/WU-9の性能計測はガイド§8条件で実施する
-- Warm(ページreload跨ぎのdisk cache)の系統的3回計測: 同一document内のcache hitは確認済み。reload跨ぎはEdgeラウンドで併せて確認する
-- screenshot: 原本は`local/`(ユーザー保存)。sanitize済み版の整備はEdgeラウンド後にまとめて行う
+- Warm(ページreload跨ぎのdisk cache)の系統的3回計測: 同一document内のcache hitは両ブラウザで確認済み。reload跨ぎの分離計測はWU-7の標準セッション計測に統合する
+- screenshot/HAR: 原本の`local/`保存はユーザー管理(保存状況の確認は未了)。sanitize済みscreenshotの整備は残タスク
