@@ -18,6 +18,14 @@ export default defineConfig({
         gallery: resolve(import.meta.dirname, 'src/gallery/index.html'),
         viewer: resolve(import.meta.dirname, 'src/viewer/index.html'),
       },
+      output: {
+        // @forge/bridge(唯一の許可runtime依存)を専用chunkへ分離する。
+        // 自コードchunkはverify:costのbuild走査を全面適用、vendor chunkは
+        // policy.build.vendorChunkPrefixes により文字列走査を免除(第一者SDK内部)。
+        manualChunks(id: string): string | undefined {
+          return id.includes('node_modules') ? 'vendor-bridge' : undefined;
+        },
+      },
     },
   },
 });

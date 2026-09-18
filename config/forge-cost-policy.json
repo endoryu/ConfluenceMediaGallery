@@ -63,7 +63,9 @@
   },
   "build": {
     "distDir": "dist",
-    "allowedUrlPrefixes": []
+    "allowedUrlPrefixes": [],
+    "$vendorComment": "vendor-bridgeは@forge/bridge(L2 §0.1の許可runtime依存)専用chunk。Atlassian第一者SDK内部のconsole/通信API/URL文字列は制御外のため走査を免除する。自コードのchunkは全面走査を維持する。",
+    "vendorChunkPrefixes": ["vendor-bridge-"]
   },
   "ci": {
     "workflowDir": ".github/workflows",
