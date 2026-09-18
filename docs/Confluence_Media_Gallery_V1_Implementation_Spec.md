@@ -451,7 +451,7 @@ cost-surface registerの有効期間は最終確認から31日とし、請求pla
 | `authorId` | 任意 | `version.authorId` |
 | `comment` | 任意 | `comment`。詳細説明として使用 |
 | `labels` | 任意 | 個別詳細の `labels.results` |
-| `downloadLink` | 必須 | P0-2で確定した正本（v1 download endpointのURL、または一覧レスポンスの `downloadLink`／`_links.download`）。UIでの使用はP0-2確定後 |
+| `downloadLink` | 必須 | 正本はv1 download endpointの正規形URL（`/wiki/rest/api/content/{pageId}/child/attachment/{attachmentId}/download?version={n}`）。一覧レスポンスの `_links` は `/wiki` ベース相対の同一endpoint別表記であり、付加queryがHTTP cacheを分割するため直接使用しない（P0-2確定） |
 | `width` / `height` | 任意 | 画像・動画elementのintrinsic metadata |
 | `duration` | 任意 | 動画・音声の `loadedmetadata` |
 
@@ -475,6 +475,8 @@ URLは版ごとに一意にする。Thumbnailとdownload endpointではAPIがサ
 thumbキャッシュ添付の命名は `mg_thumbcache_<attachmentId>_v<version>_w<width>` とし、**拡張子を付けない**（誤ダウンロード・誤アップロード・ユーザー画像との混同を防ぐ。表示はupload時に設定するContent-Typeで成立し、native `<img>` は拡張子に依存しない）。ファイル名だけで所有者（本アプリ）・対象・版・サイズを一意に判定できる。一覧表示時、`mg_thumbcache_` prefixの添付はグリッドから除外し、対応する元Attachmentのタイル画像として使用する。同名uploadはConfluence仕様により同一添付の版更新となるため、重複生成は「余分な版」に収束し実害を持たない（冪等命名）。
 
 ページ単位の整合データとして `mg_thumbcache_config`（拡張子なし・JSON）を同じ命名系で置く：生成済みthumbの台帳（attachmentId→version→widths→生成時刻）、ページ単位の生成無効化フラグ、schema version。正本はあくまで命名規則に基づく添付一覧のスキャンとし、configは高速化と設定の器である（壊れても添付スキャンから再構築可能）。この方式は追加scopeを要しない。
+
+メディアURLは正規形（`downloadLink` 行の定義）に一元化する。同一リソースを指す別表記・付加query付きURLは別cache entryとなり再転送を生むため、UIコードは必ずadapterのURL builderを経由する（P0-2確定）。
 
 ## 6. Gallery機能仕様
 
@@ -1044,7 +1046,8 @@ Thumbnailは小容量のため、native表示が成立しない場合に限りBl
 
 確認事項：
 
-- `crossorigin` 付きメディアロードと `canvas.toBlob()`（または `OffscreenCanvas.convertToBlob`）の成立（G1）
+- G1：`requestConfluence()` で取得したBlobからの `createImageBitmap` → canvas縮小 → `toBlob()` の成立（crossorigin＋canvas直接経路はCORSヘッダー不在のため不成立と確定済み。WU-3実測）
+- G1の容量条件：bridge一括取得に失敗する大容量ファイルはRange分割取得（4MB×N、Content-Range結合、上限128MB）で取得する（WU-3実測：40MB PNG＝10chunk／7.4秒→縮小25.8KB成立）。Range失敗・上限超過時のみ生成をスキップし原寸fallbackとする。生成は性能憲法の全項目より下位でwriterセッションのみ
 - `requestConfluence()` によるattachment新規作成・版更新・削除のroundtrip（G2）
 - 生成thumbのnative `<img>` 表示
 
@@ -1297,6 +1300,7 @@ V1は以下をすべて満たしたとき完了とする。
 | 整合データ | `mg_thumbcache_config`（JSON、ページごと1つ。台帳＋ページ単位無効化フラグ） |
 | 旧版・孤児thumbのGC | writer実行時に命名規則スキャンで検出し削除 |
 | 生成の協調 | BroadcastChannelによるclaim（先着1 instance）。claim待ちjitter 50〜250 ms |
+| thumb生成の素材取得 | requestConfluence一括→失敗時Range分割4MB×N（上限128MB）。それも失敗なら生成スキップ（原寸fallback） |
 
 ## 19. 公式資料
 
