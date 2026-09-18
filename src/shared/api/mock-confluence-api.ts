@@ -4,7 +4,12 @@
  * `@forge/bridge` に依存しない。
  */
 import type { AttachmentDetail, AttachmentPage, AttachmentSummary, UserSummary } from '../types/media';
-import type { ConfluenceApi, ResponseMetaListener } from './confluence-api';
+import type {
+  ConfluenceApi,
+  RedirectProbeResult,
+  ResponseMetaListener,
+  ThumbnailProbeApi,
+} from './confluence-api';
 
 export interface MockBehavior {
   /** 呼び出しごとの遅延(ms) */
@@ -13,9 +18,11 @@ export interface MockBehavior {
   failStatus?: number;
   /** 通知するレート制限ヘッダー */
   rateLimitHeaders?: Record<string, string>;
+  /** thumbnailRedirectProbeが返す結果 */
+  redirectResult?: RedirectProbeResult;
 }
 
-export class MockConfluenceApi implements ConfluenceApi {
+export class MockConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
   readonly calls: string[] = [];
 
   constructor(
@@ -67,6 +74,22 @@ export class MockConfluenceApi implements ConfluenceApi {
   async resolveUsers(accountIds: string[]): Promise<UserSummary[]> {
     await this.simulate(`users:${accountIds.length}`);
     return this.users.filter((u) => accountIds.includes(u.accountId));
+  }
+
+  async thumbnailRedirectProbe(
+    attachmentId: string,
+    _version: number | undefined,
+    _width: number,
+  ): Promise<RedirectProbeResult> {
+    await this.simulate(`redirect-probe:${attachmentId}`);
+    return (
+      this.behavior.redirectResult ?? {
+        mode: 'manual-302',
+        status: 302,
+        locationHostPath: 'media.mock.test/file/thumb',
+        cacheControl: 'private, max-age=3600',
+      }
+    );
   }
 
   thumbnailUrl(attachmentId: string, version: number, width: number): string {

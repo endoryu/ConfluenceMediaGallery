@@ -8,3 +8,6 @@ export const DIAGNOSTIC_BUFFER_LIMIT = 50;
 
 /** Attachment一覧の既定page size(Phase0_Spec §11。WU-7で25/50/100/250を比較) */
 export const DEFAULT_LIST_LIMIT = 50;
+
+/** Thumbnail width候補(Phase0_Spec §11、V1仕様書 §6.3の上限640) */
+export const THUMBNAIL_WIDTH_CANDIDATES = [320, 640] as const;
