@@ -134,9 +134,10 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi, Wri
       const form = new FormData();
       form.append('file', blob, fileName);
       form.append('minorEdit', 'true');
+      // PUT = create-or-update(同名添付は版更新)。POSTは同名400のため不使用(WU-6実測)
       const path = `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment`;
       const response = await requestConfluence(path, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'X-Atlassian-Token': 'nocheck' },
         body: form,
       });
