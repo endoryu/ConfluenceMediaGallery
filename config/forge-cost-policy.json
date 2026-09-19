@@ -13,7 +13,8 @@
     "allowedScopes": [
       "read:attachment:confluence",
       "read:user:confluence",
-      "write:attachment:confluence"
+      "write:attachment:confluence",
+      "read:content-details:confluence"
     ],
     "allowedAppKeys": ["id", "runtime"],
     "deniedKeyRules": {
