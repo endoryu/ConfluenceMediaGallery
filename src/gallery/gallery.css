@@ -1,0 +1,100 @@
+/*
+ * Gallery CSS(plain CSS 1ファイル/entry — Phase1_Spec §5.4)。
+ * design tokenはCSS custom properties(V1 §6.2)。
+ */
+:root {
+  /* タイル最小幅の初期値220 CSS px(V1 §6.2、§18) */
+  --mg-tile-min: 220px;
+  --mg-gap: 8px;
+  --mg-bg: #f4f5f7;
+  --mg-tile-bg: #dfe1e6;
+  --mg-text: #172b4d;
+  --mg-text-subtle: #6b778c;
+  --mg-focus: #0052cc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--mg-text);
+}
+
+.mg-gallery {
+  background: var(--mg-bg);
+  min-height: 120px;
+  padding: var(--mg-gap);
+}
+
+.mg-status {
+  margin: 0 0 var(--mg-gap);
+  color: var(--mg-text-subtle);
+  font-size: 14px;
+}
+
+.mg-status[hidden] {
+  display: none;
+}
+
+.mg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--mg-tile-min), 1fr));
+  gap: var(--mg-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* 比率枠を画像取得前から確保する(V1 §6.2) */
+.mg-tile {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  background: var(--mg-tile-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+
+.mg-tile:focus-visible {
+  outline: 2px solid var(--mg-focus);
+  outline-offset: 2px;
+}
+
+.mg-tile-media {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mg-text-subtle);
+  font-size: 12px;
+}
+
+/* タイトル要素は初回DOM生成時から存在させる(V1 §6.4)。表示切替はWU-6 */
+.mg-tile-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  visibility: hidden;
+}
+
+.mg-retry {
+  margin-left: 8px;
+  font-size: 13px;
+}
