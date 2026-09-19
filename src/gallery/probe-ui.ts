@@ -34,7 +34,10 @@ async function fetchAllPages(
   return items;
 }
 
-export async function renderProbeUi(root: HTMLElement, options: ProbeUiOptions): Promise<void> {
+export async function renderProbeUi(
+  root: HTMLElement,
+  options: ProbeUiOptions,
+): Promise<readonly AttachmentSummary[]> {
   const doc = root.ownerDocument;
   const { api, pageId, diagnostics } = options;
 
@@ -52,14 +55,14 @@ export async function renderProbeUi(root: HTMLElement, options: ProbeUiOptions):
       `attachment一覧の取得に失敗(${error instanceof Error ? error.message : 'unknown'})`,
     );
     status.textContent = 'Attachment一覧を取得できませんでした(診断出力を参照)';
-    return;
+    return [];
   }
   mark('p0.api.list.end');
   measure('p0.api.list.start→p0.api.list.end', 'p0.api.list.start', 'p0.api.list.end');
 
   if (items.length === 0) {
     status.textContent = 'このページにAttachmentはありません';
-    return;
+    return items;
   }
   status.textContent = `Attachment ${items.length}件`;
 
@@ -103,4 +106,5 @@ export async function renderProbeUi(root: HTMLElement, options: ProbeUiOptions):
   }
   table.append(thead, tbody);
   root.append(table);
+  return items;
 }

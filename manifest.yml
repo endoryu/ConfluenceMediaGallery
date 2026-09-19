@@ -17,6 +17,9 @@ resources:
 permissions:
   scopes:
     - read:attachment:confluence
+    # WU-6作業6・9(1WU1manifest変更の原則で同時追加。upgrade時のscope差分はユーザー確認)
+    - read:user:confluence
+    - write:attachment:confluence
 app:
   id: ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf
   runtime:

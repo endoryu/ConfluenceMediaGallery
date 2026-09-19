@@ -13,6 +13,7 @@ import { mark } from '../shared/probe/marks';
 import { RequestInventory } from '../shared/probe/request-inventory';
 import { runMediaProbe } from './probes/media-probe';
 import { attemptViewerWarmup, runModalProbe } from './probes/modal-probe';
+import { runG2WriteProbe, runUsersBulkProbe } from './probes/scope-probe';
 import { runOriginalProbe } from './probes/original-probe';
 import { runThumbnailProbe } from './probes/thumbnail-probe';
 import { renderProbeUi } from './probe-ui';
@@ -73,7 +74,7 @@ async function init(): Promise<void> {
     );
     probeRoot.append(earlyModalButton, warmupButton, warmupStatus, probeOutput);
 
-    await renderProbeUi(probeRoot, {
+    const items = await renderProbeUi(probeRoot, {
       pageId: context.pageId,
       api,
       diagnostics,
@@ -99,6 +100,27 @@ async function init(): Promise<void> {
       },
     });
     // (即時Modal・warm-upボタンは一覧取得前に上で描画済み)
+
+    // WU-6: scope probe(users-bulk疎通、G2 write roundtrip)
+    const scopeArea = document.createElement('div');
+    const usersBulkButton = document.createElement('button');
+    usersBulkButton.type = 'button';
+    usersBulkButton.dataset['action'] = 'users-bulk-probe';
+    usersBulkButton.textContent = 'users-bulk疎通probe';
+    const usersBulkStatus = document.createElement('span');
+    usersBulkButton.addEventListener('click', () => {
+      void runUsersBulkProbe(usersBulkStatus, items, api, diagnostics);
+    });
+    const g2Button = document.createElement('button');
+    g2Button.type = 'button';
+    g2Button.dataset['action'] = 'g2-write-probe';
+    g2Button.textContent = 'G2 write probe(mg_thumbcache upload→版更新→削除)';
+    const g2Status = document.createElement('span');
+    g2Button.addEventListener('click', () => {
+      void runG2WriteProbe(g2Status, context.pageId, api, diagnostics, document);
+    });
+    scopeArea.append(usersBulkButton, usersBulkStatus, g2Button, g2Status);
+    probeRoot.append(scopeArea);
   } catch (error) {
     diagnostics.record(
       'error',
