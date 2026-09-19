@@ -97,8 +97,12 @@ export async function renderViewerProbe(root: HTMLElement, deps: ViewerProbeDeps
     img.style.objectFit = 'contain';
     img.style.display = 'block';
     img.style.margin = '8px auto';
+    const mediaStarted = performance.now();
     img.addEventListener('load', () => {
-      diagnostics.record('info', `viewer: media表示成立(natural ${img.naturalWidth}x${img.naturalHeight})`);
+      diagnostics.record(
+        'info',
+        `viewer: media表示成立 ${(performance.now() - mediaStarted).toFixed(0)}ms(natural ${img.naturalWidth}x${img.naturalHeight})`,
+      );
     });
     img.addEventListener('error', () => {
       diagnostics.record('error', 'viewer: media表示失敗');
