@@ -17,8 +17,24 @@ export interface ViewerAppOptions {
   readonly raf?: (callback: () => void) => void;
   /** Original preload要素のfactory(§9.2: lane同時1。テストはstub注入) */
   readonly createPreload?: () => HTMLImageElement;
+  /** Esc/閉じる要求(§7.3: closeOnEscape:false前提の自前handler→view.close) */
+  readonly onCloseRequest?: () => void;
   readonly onDiagnostic?: (kind: 'info' | 'error', message: string) => void;
   readonly onMark?: (name: string) => void;
+}
+
+/** form control・native media control上のキーはそのcontrolに委ねる(§7.3) */
+function isControlTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const tag = target.tagName;
+  return (
+    tag === 'INPUT' ||
+    tag === 'TEXTAREA' ||
+    tag === 'SELECT' ||
+    tag === 'VIDEO' ||
+    tag === 'AUDIO' ||
+    (target as HTMLElement).isContentEditable
+  );
 }
 
 /** 正規形URL(§5.2)。thumbキャッシュ添付も同じv1 download正規形で参照する */
@@ -37,6 +53,8 @@ export function itemOriginalUrl(siteBaseUrl: string, item: ViewerSnapshotItem): 
 export class ViewerApp {
   private readonly image: HTMLImageElement;
   private readonly status: HTMLElement;
+  private readonly prevButton: HTMLButtonElement | null;
+  private readonly nextButton: HTMLButtonElement | null;
   private readonly raf: (callback: () => void) => void;
   private readonly createPreload: () => HTMLImageElement;
   private index: number;
@@ -55,6 +73,9 @@ export class ViewerApp {
     }
     this.image = image ?? doc.createElement('img');
     this.status = status ?? doc.createElement('p');
+    this.prevButton = options.root.querySelector<HTMLButtonElement>('.mgv-nav--prev');
+    this.nextButton = options.root.querySelector<HTMLButtonElement>('.mgv-nav--next');
+    this.attachNavigation(doc);
     this.index = options.snapshot.index;
     this.raf =
       options.raf ??
@@ -80,11 +101,40 @@ export class ViewerApp {
     this.render();
   }
 
-  /** indexの画像を表示する(WU-3のナビゲーションが使用) */
+  /** indexの画像を表示する(ナビゲーション — §7.3) */
   showItem(index: number): void {
     if (index < 0 || index >= this.options.snapshot.items.length) return;
     this.index = index;
+    this.options.onMark?.('p2.viewer.nav');
     this.render();
+  }
+
+  /** ナビゲーション配線(§7.3): 前後ボタン/Arrow/Esc。端で無効化 */
+  private attachNavigation(doc: Document): void {
+    this.prevButton?.addEventListener('click', () => {
+      this.showItem(this.index - 1);
+    });
+    this.nextButton?.addEventListener('click', () => {
+      this.showItem(this.index + 1);
+    });
+    doc.addEventListener('keydown', (event) => {
+      if (isControlTarget(event.target)) return; // controlに委ねる(§7.3)
+      if (event.key === 'ArrowLeft') {
+        this.showItem(this.index - 1);
+      } else if (event.key === 'ArrowRight') {
+        this.showItem(this.index + 1);
+      } else if (event.key === 'Escape') {
+        // closeOnEscape:false前提の自前handler(§7.3)
+        this.options.onCloseRequest?.();
+      }
+    });
+  }
+
+  private updateNavButtons(): void {
+    if (this.prevButton) this.prevButton.disabled = this.index <= 0;
+    if (this.nextButton) {
+      this.nextButton.disabled = this.index >= this.options.snapshot.items.length - 1;
+    }
   }
 
   /** 2段表示(§7.4)。Retryもここへ戻る(該当要求だけ再実行 — §11) */
@@ -96,6 +146,9 @@ export class ViewerApp {
     this.clearError();
     this.stageShown = false;
     this.preload = null;
+    this.updateNavButtons();
+    // 新しい画像の表示状態は毎回fitに戻す(§7.3。ズーム状態はWU-3bで拡張)
+    this.image.style.removeProperty('transform');
 
     const stage1Url = itemImageUrl(site, item);
     const originalUrl = itemOriginalUrl(site, item);
@@ -114,7 +167,7 @@ export class ViewerApp {
     };
     this.image.addEventListener('load', onStage1Load, { once: true });
     this.image.addEventListener('error', onStage1Error, { once: true });
-    this.image.alt = '';
+    this.image.alt = item.title; // 代替テキストはAttachment title(§13.4)
     this.image.hidden = false;
     this.image.src = stage1Url;
     this.options.onMark?.('p2.viewer.image-url-set');
