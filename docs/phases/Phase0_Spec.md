@@ -49,6 +49,8 @@ Phase 0で使用するページは次のとおり。
 
 `MG-06`、`MG-07`はPhase 3で使用する。
 
+注: 実site上のスモークページ名は `MG_00_Smoke`（アンダースコア）である。
+
 各ページのAttachmentについて、file hash、解像度、MIME、fileSize、`attachmentId`、`version` を `docs/evidence/phase0/test-manifest.json` に記録する。file本体はローカルとConfluence siteにのみ置く。
 
 ## 2. Phase 0の範囲
@@ -321,7 +323,7 @@ Originalをnative image requestで表示でき、2回目の同一URL表示でネ
 4. Forge CLIの適格性確認でRuns on Atlassian適格であることを記録する。
 5. `read:attachment:confluence` だけで一覧、thumbnail、download endpointが通ることを実呼び出しで確認する。
 6. `read:user:confluence` を追加したmanifestでdeploy／install upgradeを行い、scope差分表示をユーザーが確認する手順を記録する。users-bulkが通ることを確認する。
-7. `MG-09-Permissions` で、閲覧制限ページ・制限付きAttachmentが権限のあるユーザーにだけ表示されることを、developer siteの第2ユーザーで確認する。
+7. `MG-09-Permissions` で、閲覧制限ページが権限のあるユーザーに表示されることを確認する（権限あり側）。第2ユーザーによる権限なし側の確認は、developer siteへのユーザー追加不可のためPhase 0から除外し、Phase 5（リリース前）の課題として引き継ぐ（ユーザー裁定 2026-09-19。proposals/2026-09-19_phase0-revisions.md）。
 8. redirect先hostのallowlist検証ロジック（`src/shared/api`）の初期値を確定する。
 9. manifest scopeへ `write:attachment:confluence` を `read:user:confluence` と同時に追加し、upgrade時のscope差分をユーザーが確認する。upload・版更新・削除のroundtrip probe（G2。V1仕様書P0-8の後半）を実施する（proposals/2026-09-18_writer-thumbnail-cache.md）。
 
