@@ -5,7 +5,10 @@
 :root {
   /* タイル最小幅の初期値220 CSS px(V1 §6.2、§18) */
   --mg-tile-min: 220px;
-  --mg-gap: 8px;
+  /* タイル間隔(グリッド線幅)。2026-09-20ユーザー指示で8px→2px */
+  --mg-gap: 2px;
+  /* コンテナ余白(グリッド線幅とは独立) */
+  --mg-pad: 8px;
   --mg-bg: #f4f5f7;
   --mg-tile-bg: #dfe1e6;
   --mg-text: #172b4d;
@@ -26,11 +29,11 @@ body {
 .mg-gallery {
   background: var(--mg-bg);
   min-height: 120px;
-  padding: var(--mg-gap);
+  padding: var(--mg-pad);
 }
 
 .mg-status {
-  margin: 0 0 var(--mg-gap);
+  margin: 0 0 var(--mg-pad);
   color: var(--mg-text-subtle);
   font-size: 14px;
 }
@@ -126,9 +129,9 @@ body {
 
 /* writer向け手動操作(WU-5作業8)。表示の主役ではないため控えめに置く */
 .mg-admin {
-  margin-top: var(--mg-gap);
+  margin-top: var(--mg-pad);
   display: flex;
-  gap: var(--mg-gap);
+  gap: var(--mg-pad);
 }
 
 .mg-admin button {
