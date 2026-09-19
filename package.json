@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "e2e:login": "node scripts/e2e-login.mjs",
     "verify:cost": "node scripts/verify-forge-cost-policy.mjs",
     "verify:local": "npm run typecheck && npm run lint && npm run test && npm run build && npm run verify:cost",
     "verify": "npm run verify:local && forge lint",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.2",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
