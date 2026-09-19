@@ -1,0 +1,110 @@
+/*
+ * Viewer CSS(plain CSS 1ファイル/entry — Phase2_Spec §5)。
+ * V1 §7.2: 暗色背景、中央contain、前後ボタンは左右端中央でhit area≧44px、
+ * コントロールはメディア縁に重ねる。状態変化は即時(transition不使用 — §3)。
+ */
+:root {
+  --mgv-bg: #1d2125;
+  --mgv-control-bg: rgba(0, 0, 0, 0.55);
+  --mgv-control-fg: #ffffff;
+  --mgv-text-subtle: #9fadbc;
+  --mgv-focus: #579dff;
+  /* 操作ボタンhit area最低値(V1 §7.2、Phase2_Spec §11) */
+  --mgv-hit: 44px;
+  --mgv-pad: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--mgv-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--mgv-control-fg);
+}
+
+.mgv-viewer {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* メディアは利用可能領域の中央にcontain表示(§7.2) */
+.mgv-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mgv-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mgv-image[hidden] {
+  display: none;
+}
+
+/* 前へ/次へ: 左右端中央、hit area≧44×44、メディア縁に重ねる(§7.2) */
+.mgv-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: var(--mgv-hit);
+  min-height: var(--mgv-hit);
+  border: 0;
+  border-radius: 3px;
+  background: var(--mgv-control-bg);
+  color: var(--mgv-control-fg);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mgv-nav--prev {
+  left: var(--mgv-pad);
+}
+
+.mgv-nav--next {
+  right: var(--mgv-pad);
+}
+
+.mgv-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mgv-nav:focus-visible {
+  outline: 2px solid var(--mgv-focus);
+  outline-offset: 2px;
+}
+
+/* 待機・エラー等の非モーダル表示(§11.1.3はWU-4で実装) */
+.mgv-status {
+  position: absolute;
+  left: 50%;
+  bottom: var(--mgv-pad);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 3px;
+  background: var(--mgv-control-bg);
+  color: var(--mgv-text-subtle);
+  font-size: 13px;
+  max-width: 80%;
+}
+
+.mgv-status[hidden] {
+  display: none;
+}
