@@ -31,31 +31,51 @@ test('hover/focus-visibleでタイトルが表示される(§6.4)', async ({ pag
   await expect(title).toHaveCount(1);
   expect(await title.evaluate((el) => getComputedStyle(el).visibility)).toBe('hidden');
 
-  // pointer hoverで即時表示
-  await first.hover();
-  expect(await title.evaluate((el) => getComputedStyle(el).visibility)).toBe('visible');
+  // pointer hoverで表示(切替はCSSで即時。OOPIFへのpointer配送は非同期・時折失敗する
+  // ためre-hoverしつつpollで定常状態を判定する)
+  await expect
+    .poll(
+      async () => {
+        await first.hover().catch(() => undefined);
+        return title.evaluate((el) => getComputedStyle(el).visibility);
+      },
+      { timeout: 15_000 },
+    )
+    .toBe('visible');
   // 1行ellipsis
   expect(await title.evaluate((el) => getComputedStyle(el).whiteSpace)).toBe('nowrap');
   expect(await title.evaluate((el) => getComputedStyle(el).textOverflow)).toBe('ellipsis');
 
   // hover解除で非表示(OOPIF内で別タイルへ移動)、キーボードfocus(:focus-visible)で表示
   const other = frame.locator('.mg-tile').nth(5);
-  await other.hover();
   await expect
-    .poll(async () => title.evaluate((el) => getComputedStyle(el).visibility), { timeout: 5000 })
+    .poll(
+      async () => {
+        await other.hover().catch(() => undefined);
+        return title.evaluate((el) => getComputedStyle(el).visibility);
+      },
+      { timeout: 15_000 },
+    )
     .toBe('hidden');
   expect(
     await other.locator('.mg-tile-title').evaluate((el) => getComputedStyle(el).visibility),
   ).toBe('visible');
+  // frame内で完結するキーボード移動(タイル1→2)でfocus-visibleを立てる
+  // (iframe境界を跨ぐTabはOOPIFで不安定)
   await first.focus();
-  await page.keyboard.press('Shift+Tab');
-  await page.keyboard.press('Tab'); // キーボード操作でfocus-visibleを立てる
-  const focusedTitleVisible = await frame.evaluate(() => {
-    const tile = document.activeElement;
-    const t = tile?.querySelector('.mg-tile-title');
-    return t ? getComputedStyle(t).visibility : 'none';
-  });
-  expect(focusedTitleVisible).toBe('visible');
+  await page.keyboard.press('Tab');
+  await expect
+    .poll(
+      async () =>
+        frame.evaluate(() => {
+          const tile = document.activeElement;
+          const t = tile?.querySelector('.mg-tile-title');
+          return t ? getComputedStyle(t).visibility : 'none';
+        }),
+      { timeout: 5000 },
+    )
+    .toBe('visible');
+  const focusedTitleVisible = 'visible';
 
   expect(consoleFromGallery, 'gallery起因のconsole出力').toEqual([]);
   saveResult('p1-6-states-hover', { pageId, focusedTitleVisible });

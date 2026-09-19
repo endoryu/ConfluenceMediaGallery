@@ -10,6 +10,7 @@ import { v1DownloadPath } from '../shared/api/confluence-api';
 import { ForgeConfluenceApi } from '../shared/api/forge-confluence-api';
 import { getMacroContext } from '../shared/api/macro-context';
 import { RateLimitStateMachine } from '../shared/api/rate-limit-state';
+import { openViewerModal } from '../shared/api/viewer-modal';
 import { DiagnosticBuffer } from '../shared/diagnostics/diagnostic-buffer';
 import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-handler';
 import { mark } from '../shared/diagnostics/marks';
@@ -20,6 +21,7 @@ import type { MediaModel } from './media-items';
 import { pickThumbBucket, selectThumb } from './media-items';
 import type { TileImageAssignment } from './tile-loader';
 import { TileLoader, estimateTilesPerViewport, priorityForIndex } from './tile-loader';
+import { buildViewerSnapshot } from './viewer-launch';
 import { ThumbcacheClaim } from './thumbcache/claim';
 import type { ThumbcacheConfig } from './thumbcache/config';
 import { loadThumbcacheConfig } from './thumbcache/config';
@@ -236,10 +238,26 @@ async function init(): Promise<void> {
       });
     };
 
+    // Viewer close時のfocus復帰(§13.4)。復帰先タイル喪失時はグリッド先頭へ。
+    // Modal close直後は親(Confluence)のfocus管理がiframeのfocusを奪うため、
+    // 短い間隔で数回上書きする(装飾ではなくfocus確定のための再試行)
+    const restoreFocus = (attachmentId: string): void => {
+      const focusTile = (): void => {
+        const tile =
+          root.querySelector<HTMLButtonElement>(
+            `.mg-tile[data-attachment-id="${attachmentId}"]`,
+          ) ?? root.querySelector<HTMLButtonElement>('.mg-tile');
+        tile?.focus();
+      };
+      focusTile();
+      setTimeout(focusTile, 150);
+      setTimeout(focusTile, 500);
+    };
+
     const view = new GridView(
       root,
       (attachmentId) => {
-        // error状態のタイルclick=個別Retry(§11)。通常clickはPhase 2でModal open
+        // error状態のタイルclick=個別Retry(§11)
         if (view.isTileError(attachmentId)) {
           const item = sessionItems.find((i) => i.attachmentId === attachmentId);
           const host = view.getMediaHost(attachmentId);
@@ -249,7 +267,29 @@ async function init(): Promise<void> {
           }
           return;
         }
-        diagnostics.record('info', `tile activate: ${attachmentId}(viewerはPhase 2)`);
+        // click handlerはsnapshot生成+Modal.open()のみ(同期 — §7.1/§13.3)
+        const snapshot = buildViewerSnapshot({
+          items: sessionItems,
+          model,
+          siteBaseUrl: context.siteBaseUrl,
+          pageId: context.pageId,
+          attachmentId,
+          rateLimit: { phase: rateLimit.current, retryAfterMs: rateLimit.retryAfterMs },
+        });
+        if (!snapshot) {
+          // 動画・音声はPhase 4で接続(現状は診断記録のみ)
+          diagnostics.record('info', `tile activate: ${attachmentId}(image以外はPhase 4)`);
+          return;
+        }
+        mark('p2.gallery.open-click');
+        void openViewerModal(snapshot as unknown as Record<string, unknown>, () => {
+          restoreFocus(attachmentId);
+        }).catch((error: unknown) => {
+          diagnostics.record(
+            'error',
+            `Modal.open失敗(${error instanceof Error ? error.message : 'unknown'})`,
+          );
+        });
       },
       load,
     );

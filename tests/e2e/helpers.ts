@@ -66,6 +66,19 @@ export async function openGalleryFrame(
   }
 }
 
+/** Viewer Modal iframe(/viewer/)の発見(Phase2_Spec §5) */
+export async function findViewerFrame(page: Page, timeoutMs = 60_000): Promise<Frame> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const frame = page
+      .frames()
+      .find((f) => f.url().includes('cdn.prod.atlassian-dev.net') && f.url().includes('/viewer/'));
+    if (frame && (await frame.locator('.mgv-viewer').count()) > 0) return frame;
+    if (Date.now() > deadline) throw new Error('viewer frame not found');
+    await page.waitForTimeout(300);
+  }
+}
+
 export interface RecordedResponse {
   readonly hostPath: string;
   readonly status: number;
