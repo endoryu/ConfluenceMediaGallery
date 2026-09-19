@@ -1,0 +1,31 @@
+{
+  "schema": "usage-snapshot/1",
+  "kind": "phase1",
+  "note": "Phase 1(WU-0〜WU-7)の実site操作後の記録。操作は2026-09-19 08:00〜10:47 UTCに完了しており、本日12:00 UTCの日次更新に含まれる。ユーザーの目視確認(全メトリクス0・USD 0.00・支払方法未登録)をもって確定へ更新する。P0-7の最終確認と同一の目視で兼ねられる。",
+  "capturedAtUtc": "2026-09-19T10:50:00Z",
+  "period": "〜2026-09-19実施分(本日12:00 UTC更新後にユーザー確認)",
+  "appId": "ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf",
+  "developerSpaceId": "60135566-e473-41ab-b5a8-3bd69e0a99fc",
+  "environments": ["development", "staging", "production"],
+  "deployedEnvironments": ["development"],
+  "commitSha": "0100a55",
+  "policyVersion": "1.0.0",
+  "metrics": [
+    { "name": "Forge Functions duration", "value": 0, "unit": "GB-seconds" },
+    { "name": "KVS reads", "value": 0, "unit": "GB" },
+    { "name": "KVS writes", "value": 0, "unit": "GB" },
+    { "name": "Logs writes", "value": 0, "unit": "GB" },
+    { "name": "SQL compute duration", "value": 0, "unit": "hour" },
+    { "name": "SQL compute requests", "value": 0, "unit": "requests" },
+    { "name": "SQL data stored", "value": 0, "unit": "GB-hours" },
+    { "name": "Object Store requests", "value": 0, "unit": "requests" },
+    { "name": "Forge LLM input/output", "value": 0, "unit": "credits" },
+    { "name": "Containers compute/memory", "value": 0, "unit": "-" }
+  ],
+  "estimatedCostUsd": 0.0,
+  "paymentMethodRegistered": false,
+  "baselineDiff": "全メトリクス増分0見込み(Custom UIのみ。Function/KVS等の課金面は静的ゲートで不使用を保証、cost-guard全commit GREEN)",
+  "confirmedBy": "(未確認 — 本日12:00 UTC更新後のユーザー目視で記入)",
+  "recordedBy": "Claude Code",
+  "judgement": "GREEN(暫定。ユーザーの一言確認で確定)"
+}
