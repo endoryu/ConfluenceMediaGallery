@@ -1,11 +1,3 @@
-# Phase1_Spec ドラフト(承認後に docs/phases/Phase1_Spec.md へ配置)
-
-- 起案: Claude Code(2026-09-19)
-- 根拠: V1仕様書 §16 Phase 1、§5〜§6、§9〜§11、§13、Phase 0報告書(P0-1〜P0-8合格・writer化裁定CSR-2026-004)
-- 状態: 承認済み(ユーザー、2026-09-19。thumb生成のPhase 1包含を含む全項目)→ `docs/phases/Phase1_Spec.md` へ反映済み
-
----
-
 # Confluence Media Gallery Phase 1 仕様書(Gallery最小実装)
 
 | 項目 | 内容 |
@@ -15,6 +7,7 @@
 | 対象 | V1仕様書 §16 Phase 1(macro/context/pagination、media分類、stable grid、Thumbnail、empty/error、hoverタイトル、viewport優先load)+§6.3のwriter thumbキャッシュ生成 |
 | 実装 | Claude Code |
 | 裁定・承認 | ユーザー |
+| 承認 | ユーザー(2026-09-19。元proposal: `docs/proposals/2026-09-19_phase1-spec-draft.md`、thumb生成のPhase 1包含を含む全項目承認) |
 
 ## 0. 位置づけ
 
