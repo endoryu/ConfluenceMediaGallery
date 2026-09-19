@@ -74,12 +74,17 @@ test('gallery shellと一覧paginationが§13.3を満たす', async ({ page }) =
   await expect(firstTile).toHaveAttribute('aria-label', /.+/);
   await expect(firstTile.locator('.mg-tile-title')).toHaveCount(1);
 
-  // WU-1時点ではgallery iframe起点のmedia/binary要求ゼロ(Thumbnail取得はWU-4)。
-  // ページ本体(埋込画像・avatar等)の要求は判定対象外
+  // 初期表示のrequestはメタデータとThumbnail(タイル画像)のみ(§13.3)。
+  // gallery起点のmedia要求はすべて正規形v1 download(またはそのredirect先)である
   const mediaRequests = recorder
     .snapshot()
     .filter((r) => r.frameHostPath?.includes('/gallery/'));
-  expect(mediaRequests.length, 'gallery起点のmedia/binary要求が発生していない').toBe(0);
+  for (const r of mediaRequests) {
+    const canonical =
+      /\/wiki\/rest\/api\/content\/[^/]+\/child\/attachment\/[^/]+\/download$/.test(r.hostPath) ||
+      r.hostPath.includes('api.media.atlassian.com');
+    expect(canonical, `正規形以外のmedia要求: ${r.hostPath}`).toBe(true);
+  }
 
   const tileCount = await frame.locator('.mg-tile').count();
   const path = saveResult('p1-1-shell', {

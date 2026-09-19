@@ -111,3 +111,9 @@ body {
   margin-left: 8px;
   font-size: 13px;
 }
+
+/* Thumbnail失敗タイル(V1 §11)。click=個別Retry */
+.mg-tile[data-error='1'] .mg-tile-media {
+  font-size: 24px;
+  color: #bf2600;
+}
