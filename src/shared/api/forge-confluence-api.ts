@@ -141,7 +141,15 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi, Wri
         body: form,
       });
       this.notify(path, response);
-      if (!response.ok) return { status: response.status };
+      if (!response.ok) {
+        let note: string | undefined;
+        try {
+          note = (await response.text()).slice(0, 300);
+        } catch {
+          note = undefined;
+        }
+        return note === undefined ? { status: response.status } : { status: response.status, note };
+      }
       const json = (await response.json()) as { results?: { id?: string }[] };
       const attachmentId = json.results?.[0]?.id;
       return attachmentId ? { status: response.status, attachmentId } : { status: response.status };
@@ -175,9 +183,20 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi, Wri
 
   async deleteAttachment(attachmentId: string): Promise<{ status: number; note?: string }> {
     try {
-      const path = `/wiki/rest/api/content/${encodeURIComponent(attachmentId)}`;
+      // v2 attachments delete(要求scope: delete:attachment:confluence)。
+      // v1 DELETE /content/{id} はWU-6実測で401(scope不一致)のため不使用
+      const path = `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}`;
       const response = await requestConfluence(path, { method: 'DELETE' });
       this.notify(path, response);
+      if (!response.ok && response.status !== 204) {
+        let note: string | undefined;
+        try {
+          note = (await response.text()).slice(0, 200);
+        } catch {
+          note = undefined;
+        }
+        return note === undefined ? { status: response.status } : { status: response.status, note };
+      }
       return { status: response.status };
     } catch (error) {
       return { status: -1, note: error instanceof Error ? error.message : 'unknown' };

@@ -18,21 +18,35 @@ import {
 interface ConsoleRecord {
   type: string;
   text: string;
+  sourceUrl: string;
 }
 
 function collectConsole(page: Page): ConsoleRecord[] {
   const records: ConsoleRecord[] = [];
   page.on('console', (msg) => {
-    records.push({ type: msg.type(), text: msg.text().slice(0, 500) });
+    records.push({
+      type: msg.type(),
+      text: msg.text().slice(0, 500),
+      sourceUrl: msg.location().url ?? '',
+    });
   });
   page.on('pageerror', (error) => {
-    records.push({ type: 'pageerror', text: String(error).slice(0, 500) });
+    records.push({ type: 'pageerror', text: String(error).slice(0, 500), sourceUrl: '' });
   });
   return records;
 }
 
 const isCspViolation = (r: ConsoleRecord): boolean =>
   /Content Security Policy|Refused to load|violates the following/i.test(r.text);
+
+/**
+ * 本アプリ起因の判定: 発生元が本アプリのiframe(forge cdn)か、
+ * 対象URLがmedia/attachment配信のもの。Confluence本体のCSPノイズ
+ * (cloudfront・analytics等)はP0-5の判定対象外として別記録する。
+ */
+const isFromOurApp = (r: ConsoleRecord): boolean =>
+  r.sourceUrl.includes('cdn.prod.atlassian-dev.net') ||
+  /media\.atlassian\.com|\/child\/attachment\//.test(r.text);
 
 test('P0-5: egress宣言ゼロで全種別ロード時のCSP violationなし', async ({ page, request }) => {
   const consoleRecords = collectConsole(page);
@@ -69,11 +83,15 @@ test('P0-5: egress宣言ゼロで全種別ロード時のCSP violationなし', a
       .waitFor({ timeout: 60_000 });
   }
 
-  const violations = consoleRecords.filter(isCspViolation);
+  const allViolations = consoleRecords.filter(isCspViolation);
+  const appViolations = allViolations.filter(isFromOurApp);
+  const hostNoise = allViolations.filter((r) => !isFromOurApp(r));
   const mediaHosts = [...new Set(recorder.snapshot().map((r) => r.hostPath.split('/')[0]))];
-  const path = saveResult('p0-5-csp', { violations, consoleRecords, mediaHosts });
-  console.log(`CSP violations: ${violations.length}, media hosts: ${mediaHosts.join(', ')}(${path})`);
-  expect(violations).toHaveLength(0);
+  const path = saveResult('p0-5-csp', { appViolations, hostNoiseCount: hostNoise.length, hostNoiseSample: hostNoise.slice(0, 10), mediaHosts });
+  console.log(
+    `app起因CSP violations: ${appViolations.length}(Confluence本体ノイズ: ${hostNoise.length}件は対象外), media hosts: ${mediaHosts.join(', ')}(${path})`,
+  );
+  expect(appViolations).toHaveLength(0);
 });
 
 test('P0-5: users-bulk疎通(read:user)', async ({ page, request }) => {

@@ -14,7 +14,8 @@
       "read:attachment:confluence",
       "read:user:confluence",
       "write:attachment:confluence",
-      "read:content-details:confluence"
+      "read:content-details:confluence",
+      "delete:attachment:confluence"
     ],
     "allowedAppKeys": ["id", "runtime"],
     "deniedKeyRules": {

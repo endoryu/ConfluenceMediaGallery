@@ -22,6 +22,8 @@ permissions:
     - write:attachment:confluence
     # v1 attachment作成APIの必須ペア(公式docs: write:attachmentと併記)。WU-6実測401「scope does not match」への対処
     - read:content-details:confluence
+    # thumbキャッシュの旧版・孤児GC用(v2 attachments delete。v1 deleteは401のためv2使用)
+    - delete:attachment:confluence
 app:
   id: ari:cloud:ecosystem::app/3f888a57-418d-4eb2-ba64-a138fb2eefbf
   runtime:
