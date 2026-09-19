@@ -274,7 +274,7 @@ async function init(): Promise<void> {
           siteBaseUrl: context.siteBaseUrl,
           pageId: context.pageId,
           attachmentId,
-          rateLimit: { phase: rateLimit.current, retryAfterMs: rateLimit.retryAfterMs },
+          rateLimit: rateLimit.exportState(), // 縮退状態の共有(§11.1 — WU-4)
         });
         if (!snapshot) {
           // 動画・音声はPhase 4で接続(現状は診断記録のみ)

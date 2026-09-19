@@ -19,9 +19,20 @@ export interface ViewerAppOptions {
   readonly createPreload?: () => HTMLImageElement;
   /** Esc/閉じる要求(§7.3: closeOnEscape:false前提の自前handler→view.close) */
   readonly onCloseRequest?: () => void;
+  /** 縮退state machine(§11.1。snapshotから復元したもの — WU-4) */
+  readonly rateLimit?: {
+    canIssueRequests(): boolean;
+    readonly blockedRemainingMs: number;
+    recordMediaFailure(): void;
+  };
+  /** 待機の自動復帰timer(既定setTimeout。テストは手動発火を注入) */
+  readonly schedule?: (callback: () => void, ms: number) => void;
   readonly onDiagnostic?: (kind: 'info' | 'error', message: string) => void;
   readonly onMark?: (name: string) => void;
 }
+
+/** 待機表示の切替閾値(V1 §11.1.3/§18の60秒) */
+const WAIT_DISPLAY_THRESHOLD_MS = 60_000;
 
 /** form control・native media control上のキーはそのcontrolに委ねる(§7.3) */
 function isControlTarget(target: EventTarget | null): boolean {
@@ -147,6 +158,14 @@ export class ViewerApp {
     this.stageShown = false;
     this.preload = null;
     this.updateNavButtons();
+    // Blocked中は新規media要求を停止し、表示済み+待機表示で応答(§11.1/§11.1.3)。
+    // Viewer開閉・前後移動・Escは継続する(ナビは要求なしでindexのみ進む)
+    const rateLimit = this.options.rateLimit;
+    if (rateLimit && !rateLimit.canIssueRequests()) {
+      this.renderBlockedWait(seq);
+      return;
+    }
+    this.clearBlockedWait();
     // 新しい画像の表示状態は毎回fitに戻す(§7.3。ズーム状態はWU-3bで拡張)
     this.image.style.removeProperty('transform');
 
@@ -161,6 +180,7 @@ export class ViewerApp {
     };
     const onStage1Error = (): void => {
       if (seq !== this.renderSeq) return;
+      this.options.rateLimit?.recordMediaFailure(); // §11.1.1の補助情報
       this.options.onDiagnostic?.('error', `viewer: 前段load失敗(${item.attachmentId})`);
       if (isDirectOriginal) this.showErrorFallback(item, originalUrl); // 全滅
       // thumb失敗時はOriginal preloadの完了(下)で回復を待つ
@@ -202,6 +222,7 @@ export class ViewerApp {
       'error',
       () => {
         if (seq !== this.renderSeq) return;
+        this.options.rateLimit?.recordMediaFailure(); // §11.1.1の補助情報
         this.options.onDiagnostic?.('error', `viewer: Original失敗(${item.attachmentId})`);
         if (this.stageShown) {
           // Original失敗時はthumb表示を維持する(§7.4/§11)
@@ -213,6 +234,44 @@ export class ViewerApp {
       { once: true },
     );
     preload.src = originalUrl;
+  }
+
+  /** Blocked中の待機表示(§11.1.3: Retry-After実値で出し分け、非モーダル) */
+  private renderBlockedWait(seq: number): void {
+    const rateLimit = this.options.rateLimit;
+    if (!rateLimit) return;
+    const remaining = rateLimit.blockedRemainingMs;
+    const doc = this.status.ownerDocument;
+    this.status.dataset['state'] = 'blocked';
+    if (remaining >= WAIT_DISPLAY_THRESHOLD_MS) {
+      this.status.textContent =
+        '混雑のため読み込みを停止しています。時間をおいて再読み込みしてください';
+      const reload = doc.createElement('button');
+      reload.type = 'button';
+      reload.className = 'mgv-reload';
+      reload.textContent = '再読み込み';
+      reload.addEventListener('click', () => {
+        this.render();
+      });
+      this.status.append(' ', reload);
+    } else {
+      this.status.textContent = '混雑のため一部の読み込みを待機中';
+    }
+    this.status.hidden = false;
+    // Retry-After経過後は自動復帰(§11.1.3)
+    const schedule = this.options.schedule ?? ((cb, ms) => void setTimeout(cb, ms));
+    schedule(() => {
+      if (seq !== this.renderSeq) return; // その後のナビ・再読み込みが優先
+      this.render();
+    }, Math.max(250, remaining + 50));
+  }
+
+  private clearBlockedWait(): void {
+    if (this.status.dataset['state'] === 'blocked') {
+      delete this.status.dataset['state'];
+      this.status.textContent = '';
+      this.status.hidden = true;
+    }
   }
 
   /** すべて失敗時のエラーfallback(§7.4/§11: Retry+Originalを開く+ダウンロード) */

@@ -74,6 +74,37 @@ export class RateLimitStateMachine {
     for (const listener of [...this.listeners]) listener(next, previous);
   }
 
+  /** Blocked残り時間(ms)。非Blockedは0(§11.1.3の実値出し分け用) */
+  get blockedRemainingMs(): number {
+    this.tick();
+    return this.phase === 'Blocked' ? Math.max(0, this.blockedUntil - this.now()) : 0;
+  }
+
+  /** Gallery→Viewer引継ぎ用の状態(§11.1「双方で共有」— snapshot経由の最小実装) */
+  exportState(): { phase: RateLimitPhase; retryAfterMs: number; blockedUntilEpoch?: number } {
+    this.tick();
+    return {
+      phase: this.phase,
+      retryAfterMs: this.lastRetryAfterMs,
+      ...(this.phase === 'Blocked' ? { blockedUntilEpoch: this.blockedUntil } : {}),
+    };
+  }
+
+  /** 引継ぎ状態の復元。Blocked期限超過はNormalへ丸める */
+  restoreState(state: {
+    phase: RateLimitPhase;
+    retryAfterMs: number;
+    blockedUntilEpoch?: number;
+  }): void {
+    this.lastRetryAfterMs = state.retryAfterMs;
+    if (state.phase === 'Blocked' && state.blockedUntilEpoch !== undefined) {
+      this.blockedUntil = state.blockedUntilEpoch;
+      if (this.now() < this.blockedUntil) this.setPhase('Blocked');
+      return;
+    }
+    if (state.phase === 'Degraded') this.setPhase('Degraded');
+  }
+
   /** Blocked期限の経過を反映する(自動Normal復帰 — §11.1) */
   tick(): void {
     if (this.phase === 'Blocked' && this.now() >= this.blockedUntil) {
