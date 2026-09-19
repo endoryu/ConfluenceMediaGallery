@@ -13,7 +13,7 @@ import {
   listAttachments,
   openGalleryFrame,
   saveResult,
-} from './helpers';
+} from '../helpers';
 
 const isMediaHostPath = (hostPath: string): boolean =>
   hostPath.includes('/child/attachment/') || hostPath.includes('media.atlassian.com');

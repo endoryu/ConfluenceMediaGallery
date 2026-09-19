@@ -7,8 +7,13 @@ import { defineConfig } from '@playwright/test';
 // trace/HAR/screenshot等の原本は local/ 配下へ(CLAUDE.md §10)。
 const STORAGE_STATE = 'local/storageState.json';
 
+// Phase 0 probe時代のspec(tests/e2e/phase0/)は回帰資産として保持し、既定実行
+// から除外する(Phase1_Spec §5.5)。明示実行: $env:PW_PHASE0='1'; npx playwright test
+const RUN_PHASE0 = process.env['PW_PHASE0'] === '1';
+
 export default defineConfig({
   testDir: 'tests/e2e',
+  testIgnore: RUN_PHASE0 ? [] : ['**/phase0/**'],
   outputDir: 'local/playwright-output',
   fullyParallel: false,
   workers: 1,

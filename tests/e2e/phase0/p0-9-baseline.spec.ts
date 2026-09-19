@@ -8,7 +8,7 @@
  */
 import { test } from '@playwright/test';
 import type { CDPSession, Frame, Page } from '@playwright/test';
-import { NetworkRecorder, findPageIdByTitle, listAttachments, openGalleryFrame, saveResult } from './helpers';
+import { NetworkRecorder, findPageIdByTitle, listAttachments, openGalleryFrame, saveResult } from '../helpers';
 
 const IMAGES = [
   { file: 'mg05-1080p.jpg', width: 1920 },
