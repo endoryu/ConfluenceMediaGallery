@@ -71,6 +71,20 @@ describe('compareGalleryOrder', () => {
     expect(sorted).toEqual(['5', '7', '2', '10']);
   });
 
+  it('att形式idも数値部で昇順比較する', () => {
+    const t = '2026-09-01T00:00:00.000Z';
+    const items = [
+      makeItem('att100', { updatedAt: t }),
+      makeItem('att9', { updatedAt: t }),
+      makeItem('att20', { updatedAt: t }),
+    ];
+    expect([...items].sort(compareGalleryOrder).map((i) => i.attachmentId)).toEqual([
+      'att9',
+      'att20',
+      'att100',
+    ]);
+  });
+
   it('updatedAt欠落はcreatedAtへfallbackする', () => {
     const a = makeItem('1', { updatedAt: undefined as never, createdAt: '2026-09-05T00:00:00.000Z' });
     const b = makeItem('2', { updatedAt: '2026-09-04T00:00:00.000Z' });

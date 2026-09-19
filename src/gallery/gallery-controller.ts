@@ -53,10 +53,18 @@ export function compareGalleryOrder(a: AttachmentSummary, b: AttachmentSummary):
   return compareIdAsc(a.attachmentId, b.attachmentId);
 }
 
-/** 数値文字列は数値順、それ以外は辞書順で昇順比較する */
+/**
+ * attachmentId昇順。実idは "att66087" 形式のため、共通prefix+数値部は
+ * 数値順(桁数→辞書順)で比較し、桁数違いによる逆転を防ぐ。
+ */
 function compareIdAsc(a: string, b: string): number {
-  if (/^\d+$/.test(a) && /^\d+$/.test(b)) {
-    if (a.length !== b.length) return a.length - b.length;
+  const ma = /^(\D*)(\d*)$/.exec(a);
+  const mb = /^(\D*)(\d*)$/.exec(b);
+  if (ma && mb && ma[1] === mb[1] && ma[2] && mb[2]) {
+    const da = ma[2];
+    const db = mb[2];
+    if (da.length !== db.length) return da.length - db.length;
+    return da < db ? -1 : da > db ? 1 : 0;
   }
   return a < b ? -1 : a > b ? 1 : 0;
 }

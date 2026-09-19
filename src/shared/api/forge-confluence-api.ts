@@ -125,6 +125,19 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi, Wri
     );
   }
 
+  async canUpdateAttachment(attachmentId: string): Promise<boolean> {
+    try {
+      const json = (await this.requestJson(
+        `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/operations`,
+      )) as { operations?: { operation?: string; targetType?: string }[] };
+      return (json.operations ?? []).some(
+        (op) => op.operation === 'update' && op.targetType === 'attachment',
+      );
+    } catch {
+      return false; // 取得不能は非writer扱い(生成は静かに見送る)
+    }
+  }
+
   async uploadAttachment(
     pageId: string,
     fileName: string,

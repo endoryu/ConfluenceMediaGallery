@@ -6,6 +6,7 @@
  */
 import './gallery.css';
 import { CachingConfluenceApi } from '../shared/api/caching-confluence-api';
+import { v1DownloadPath } from '../shared/api/confluence-api';
 import { ForgeConfluenceApi } from '../shared/api/forge-confluence-api';
 import { getMacroContext } from '../shared/api/macro-context';
 import { RateLimitStateMachine } from '../shared/api/rate-limit-state';
@@ -19,12 +20,19 @@ import type { MediaModel } from './media-items';
 import { pickThumbBucket, selectThumb } from './media-items';
 import type { TileImageAssignment } from './tile-loader';
 import { TileLoader, estimateTilesPerViewport, priorityForIndex } from './tile-loader';
+import { ThumbcacheClaim } from './thumbcache/claim';
+import type { ThumbcacheConfig } from './thumbcache/config';
+import { loadThumbcacheConfig } from './thumbcache/config';
+import { ThumbcacheGenerator } from './thumbcache/generator';
 
 // module評価時点 ≈ DOMContentLoaded(type=module はdeferred実行)
 mark('p1.gallery.dcl');
 
 const diagnostics = new DiagnosticBuffer();
 registerGlobalErrorHandler(diagnostics);
+// 診断バッファの画面内読み出し口(E2E・手動診断用。console/外部へは出さない — §8)
+(globalThis as unknown as { __MG_DIAG__?: () => unknown }).__MG_DIAG__ = () =>
+  diagnostics.snapshot();
 
 /** Galleryセッションの正本(§6.1)。Phase 2でViewer snapshotの源泉になる */
 let sessionItems: readonly AttachmentSummary[] = [];
@@ -47,6 +55,9 @@ async function init(): Promise<void> {
     const rateLimit = new RateLimitStateMachine();
     const api = new ForgeConfluenceApi(context.siteBaseUrl, (meta) => {
       rateLimit.observe(meta); // 縮退state machineへの通知(V1 §11.1.1)
+      if (meta.status >= 400) {
+        diagnostics.record('error', `api ${meta.status}: ${meta.path}`);
+      }
     });
     rateLimit.onChange((next, prev) => {
       diagnostics.record('state', `rate-limit: ${prev} -> ${next}`);
@@ -116,6 +127,93 @@ async function init(): Promise<void> {
       mark('p1.gallery.images.start');
     };
 
+    /** thumb生成・GC・config更新(WU-5)。表示完了後のidleで実行、失敗は静かにfallback継続 */
+    const startThumbcacheMaintenance = async (mdl: MediaModel): Promise<void> => {
+      try {
+        let config: ThumbcacheConfig | null = null;
+        if (mdl.configItem) {
+          config = await loadThumbcacheConfig(
+            api,
+            v1DownloadPath(mdl.configItem.pageId, mdl.configItem.attachmentId, mdl.configItem.version),
+          );
+        }
+        const generator = new ThumbcacheGenerator({
+          pageId: context.pageId,
+          document,
+          fetcher: api,
+          writer: api,
+          buildSourcePath: (item) => v1DownloadPath(item.pageId, item.attachmentId, item.version),
+          claim: new ThumbcacheClaim({ pageId: context.pageId }),
+          onDiagnostic: (kind, message) => {
+            diagnostics.record(kind, message);
+          },
+        });
+        const summary = await generator.run(mdl, config);
+        mark('p1.thumbcache.done');
+        diagnostics.record(
+          'info',
+          `thumbcache: ${summary.outcome} generated=${summary.generated} deleted=${summary.deleted} skipped=${summary.skipped}`,
+        );
+        // 手動操作UI(クリア/無効化)はwriterのみ表示(WU-5作業8)
+        const sampleId =
+          mdl.media[0]?.attachmentId ??
+          [...mdl.thumbsByTarget.values()][0]?.[0]?.cacheAttachmentId ??
+          mdl.configItem?.attachmentId;
+        const isWriter =
+          summary.outcome === 'generated' ||
+          (summary.outcome !== 'not-writer' &&
+            sampleId !== undefined &&
+            (await api.canUpdateAttachment(sampleId)));
+        if (isWriter) setupAdminBar(generator, mdl, config);
+      } catch (error) {
+        diagnostics.record(
+          'error',
+          `thumbcache: 実行失敗(${error instanceof Error ? error.message : 'unknown'})`,
+        );
+      }
+    };
+
+    const setupAdminBar = (
+      generator: ThumbcacheGenerator,
+      mdl: MediaModel,
+      config: ThumbcacheConfig | null,
+    ): void => {
+      if (root.querySelector('.mg-admin')) return;
+      const bar = document.createElement('div');
+      bar.className = 'mg-admin';
+      const clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.textContent = 'サムネイルキャッシュをクリア';
+      clearButton.addEventListener('click', () => {
+        clearButton.disabled = true;
+        void generator.clearAll(mdl, config).finally(() => {
+          clearButton.disabled = false;
+        });
+      });
+      const toggleButton = document.createElement('button');
+      toggleButton.type = 'button';
+      let disabled = config?.disabled ?? false;
+      const label = (): string =>
+        disabled ? 'このページで生成を有効化' : 'このページで生成を無効化';
+      toggleButton.textContent = label();
+      toggleButton.addEventListener('click', () => {
+        toggleButton.disabled = true;
+        void generator
+          .setDisabled(config, !disabled)
+          .then((changed) => {
+            if (changed) {
+              disabled = !disabled;
+              toggleButton.textContent = label();
+            }
+          })
+          .finally(() => {
+            toggleButton.disabled = false;
+          });
+      });
+      bar.append(clearButton, toggleButton);
+      root.append(bar);
+    };
+
     // load(Retry含む)→controller→viewの相互参照は呼び出し時解決の閉包で結ぶ
     const load = (): void => {
       // Blocked中は新規要求を停止する(§11.1。本表示はWU-6)
@@ -132,6 +230,8 @@ async function init(): Promise<void> {
           sessionItems = result.items;
           model = result.model;
           if (result.items.length > 0) applyImages(result.items);
+          // 生成・GCは表示より下位の優先度で開始する(§6.3、性能憲法)
+          void startThumbcacheMaintenance(result.model);
         }
       });
     };
