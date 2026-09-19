@@ -15,7 +15,7 @@
 | P0-4 Fullscreen Modal | **合格** | `docs/evidence/phase0/P0-4/result.md` |
 | P0-5 CSP/egress/RoA適格 | **合格** | `docs/evidence/phase0/P0-5/result.md` |
 | P0-6 APIポイント/縮退 | **合格** | `docs/evidence/phase0/P0-6/result.md`、`rate-limit-headers.md` |
-| P0-7 課金防止ハーネス | **静的ゲート合格・baseline GREEN。Phase 0後snapshot(WU-8b)はユーザー確認待ち** | `test-results/cost-guard/*.json`、`docs/operations/usage-snapshots/2026-09-18-baseline.json` |
+| P0-7 課金防止ハーネス | **合格(条件付き確定)** — baseline・Phase 0後snapshotともUSD 0.00・支払方法未登録をユーザー確認(9/19実施分を含む最終確認のみ次回12:00 UTC更新後の一言) | `docs/evidence/phase0/P0-7/result.md`、`usage-snapshots/` |
 | P0-8 thumbキャッシュ書き戻し | **合格**(G1b/G1c+G2) | P0-2/P0-5 result.md |
 
 重要な実測帰結: **縮小サムネイル配信は本アプリから到達不能**(thumbnail endpoint=/binary原寸、legacy=原寸、media /image=署名不可)→ ユーザー裁定によりwriter化(thumbキャッシュ書き戻し)へ設計変更(CSR-2026-004)。生成はG1b(bridge blob)+G1c(Range分割4MB×N)で**全サイズ実装可能**。
@@ -55,7 +55,7 @@
 ## 4. V1仕様書・ガイド改訂案
 
 - 反映済み: writer化一式(2026-09-18_writer-thumbnail-cache.md)、G1b/URL正規化(2026-09-19_g1b-and-url-normalization.md)
-- **承認待ちbatch**: `docs/proposals/2026-09-19_phase0-revisions.md`(scope 5種、PUT/v2 delete、冪等機構、§7.2ヘッダー正、§4.5.4基準値157pt、Preview bucket廃止、L3の除外注記)
+- **反映済み**: batch(`docs/proposals/2026-09-19_phase0-revisions.md`、承認2026-09-19)— scope 5種、PUT/v2 delete、冪等機構、§7.2ヘッダー正、§4.5.4基準値157pt、Preview bucket廃止、L3の除外注記
 
 ## 5. WU-9 標準Viewer比較baseline
 
@@ -85,9 +85,6 @@
 
 ## 7. Phase 1着手の推奨
 
-**推奨: 可**。条件は次の2点の完了のみ:
-
-1. **WU-8b**: 次回12:00 UTC更新後のUsage確認(ユーザー)→ 全メトリクス0・USD 0.00・支払方法未登録 → snapshot記録(`GREEN`)
-2. batch proposal(§4)の承認と反映
+**推奨: 可**。batch proposalは承認・反映済み。WU-8b snapshotは記録済み(GREEN暫定)で、残条件は**9/19実施分を含む次回12:00 UTC更新後のユーザー一言確認**のみ。
 
 Phase 1の設計前提は本報告の§1〜2で確定した実測事実(原寸配信、writer thumbキャッシュ、Range分割、scope 5種、点数157pt級、page size 50)に基づくこと。
