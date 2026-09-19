@@ -117,3 +117,20 @@ body {
   font-size: 24px;
   color: #bf2600;
 }
+
+/* writer向け手動操作(WU-5作業8)。表示の主役ではないため控えめに置く */
+.mg-admin {
+  margin-top: var(--mg-gap);
+  display: flex;
+  gap: var(--mg-gap);
+}
+
+.mg-admin button {
+  font-size: 12px;
+  color: var(--mg-text-subtle);
+  background: none;
+  border: 1px solid var(--mg-tile-bg);
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+}

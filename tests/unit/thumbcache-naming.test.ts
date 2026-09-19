@@ -9,11 +9,16 @@ import {
 } from '../../src/gallery/thumbcache/naming';
 
 describe('parseThumbcacheName', () => {
-  it('正しい命名を解析する', () => {
+  it('正しい命名を解析する(実idは att66087 形式 — v2 API)', () => {
     expect(parseThumbcacheName('mg_thumbcache_123456_v5_w320')).toEqual({
       targetAttachmentId: '123456',
       targetVersion: 5,
       width: 320,
+    });
+    expect(parseThumbcacheName('mg_thumbcache_att66087_v4_w640')).toEqual({
+      targetAttachmentId: 'att66087',
+      targetVersion: 4,
+      width: 640,
     });
   });
 
@@ -23,9 +28,9 @@ describe('parseThumbcacheName', () => {
       'mg_thumbcache_123_v5_w320.png', // 拡張子付き
       'mg_thumbcache_123_v5', // width欠落
       'mg_thumbcache_123_w320', // version欠落
-      'mg_thumbcache_abc_v5_w320', // 非数値id
+      'mg_thumbcache_att_66087_v5_w320', // idに区切り文字
       'mg_thumbcache_123_vx_w320', // 非数値version
-      'MG_THUMBCACHE_123_v5_w320', // 大文字
+      'MG_THUMBCACHE_123_v5_w320', // 大文字prefix
       'photo.png',
       'xmg_thumbcache_123_v5_w320', // 前置文字
       'mg_thumbcache_123_v5_w320_extra', // 後置

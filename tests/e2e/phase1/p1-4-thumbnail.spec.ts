@@ -61,8 +61,14 @@ test('タイル画像が原寸fallbackで表示され優先度属性が付与さ
   expect(info.errorTiles).toBe(0);
   // 3層の優先度が存在する(high層は必ず存在。auto/lowはviewport量に依存)
   expect(info.priorities.filter((p) => p === 'high').length).toBeGreaterThan(0);
-  // thumb未生成のため全imgがfallback
-  expect(info.fallbackCount).toBe(info.imgCount);
+  // fallback数=アプリが対応表で有効thumbなしと判定した件数(§6.3。生成進行と競合しない判定)
+  const diag = (await frame.evaluate(() =>
+    (globalThis as unknown as { __MG_DIAG__?: () => { message: string }[] }).__MG_DIAG__?.() ?? [],
+  )) as { message: string }[];
+  const matched = Number(
+    diag.map((d) => /thumb対応(\d+)件/.exec(d.message)?.[1]).find((v) => v !== undefined) ?? '0',
+  );
+  expect(info.fallbackCount).toBe(info.imgCount - matched);
 
   // gallery起点のmedia要求はすべて正規形(§5.2)
   const galleryRequests = recorder

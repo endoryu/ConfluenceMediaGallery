@@ -10,7 +10,8 @@ export const THUMBCACHE_PREFIX = 'mg_thumbcache_';
 /** ページ単位の整合データ(台帳・無効化フラグ。V1 §5.2) */
 export const THUMBCACHE_CONFIG_NAME = 'mg_thumbcache_config';
 
-const NAME_PATTERN = /^mg_thumbcache_(\d+)_v(\d+)_w(\d+)$/;
+// attachmentIdは実データで "att66087" 形式(v2 API)。英数字idを受ける
+const NAME_PATTERN = /^mg_thumbcache_([A-Za-z0-9]+)_v(\d+)_w(\d+)$/;
 
 export interface ThumbcacheName {
   readonly targetAttachmentId: string;

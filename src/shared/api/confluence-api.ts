@@ -61,10 +61,17 @@ export interface BinaryFetchOptions {
 }
 
 /**
- * G2 probe(P0-8後半): mg_thumbcache_* 添付のupload/版更新/削除。
+ * thumbキャッシュ書込み(P0-8で実証、Phase 1 WU-5で本採用)。
  * write:attachment:confluence の用途は自己管理thumb添付に限る(V1 §3.3)。
+ * 呼び出し側はファイル名を必ず命名ガード(thumbcache/naming.ts)に通す。
  */
-export interface WriteProbeApi {
+export interface AttachmentWriterApi {
+  /**
+   * 現在ユーザーが添付を更新できるか(v2 attachments operations)。
+   * 生成可否の判定に使う。v1 content GET+expand=operationsはappスコープ外で
+   * 401になるため使用しない(WU-5実測)。
+   */
+  canUpdateAttachment(attachmentId: string): Promise<boolean>;
   uploadAttachment(
     pageId: string,
     fileName: string,
@@ -79,6 +86,9 @@ export interface WriteProbeApi {
   deleteAttachment(attachmentId: string): Promise<{ status: number; note?: string }>;
 }
 
+/** 旧称(Phase 0 probe期)。既存参照の互換用 */
+export type WriteProbeApi = AttachmentWriterApi;
+
 export interface BinaryFetchResult {
   readonly ok: boolean;
   readonly status: number;
@@ -87,6 +97,11 @@ export interface BinaryFetchResult {
   /** Content-Rangeヘッダー(206時) */
   readonly contentRange?: string;
   readonly note?: string;
+}
+
+/** 正規形v1 download endpointのsite相対path(V1 §5.1 downloadLink行、§5.2) */
+export function v1DownloadPath(pageId: string, attachmentId: string, version: number): string {
+  return `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment/${encodeURIComponent(attachmentId)}/download?version=${version}`;
 }
 
 /** レスポンスから記録対象ヘッダーを抽出する */
