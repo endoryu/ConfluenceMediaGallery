@@ -5,7 +5,7 @@
  * ViewerコードはGallery bundleに含めない(CLAUDE.md §8)。
  */
 import './viewer.css';
-import { getModalContext } from '../shared/api/view-context';
+import { closeView, getModalContext } from '../shared/api/view-context';
 import { DiagnosticBuffer } from '../shared/diagnostics/diagnostic-buffer';
 import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-handler';
 import { mark } from '../shared/diagnostics/marks';
@@ -53,6 +53,9 @@ async function init(): Promise<void> {
   const app = new ViewerApp({
     root,
     snapshot,
+    onCloseRequest: () => {
+      closeView(); // Esc自前handler→view.close(§7.3)
+    },
     onDiagnostic: (kind, message) => {
       diagnostics.record(kind, message);
     },
