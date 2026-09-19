@@ -47,10 +47,14 @@ async function init(): Promise<void> {
     return;
   }
 
-  // 起動計測(P0-4方式): click(t0)→dcl、→first-paint
+  // 起動計測(P0-4方式): click(t0)→dcl、→first-paint。snapshotサイズ(P2-E-03記録)
   if (snapshot.t0 > 0) {
     diagnostics.record('info', `viewer: dclDelta=${dclAtEpoch - snapshot.t0}ms`);
   }
+  diagnostics.record(
+    'info',
+    `viewer: snapshot items=${snapshot.items.length} bytes=${JSON.stringify(snapshotRaw).length}`,
+  );
   // 縮退状態をsnapshotから復元(§11.1「双方で共有」 — WU-4)
   const rateLimit = new RateLimitStateMachine();
   if (snapshot.rateLimit) rateLimit.restoreState(snapshot.rateLimit);
