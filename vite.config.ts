@@ -11,6 +11,12 @@ export default defineConfig(({ mode }) => {
     root: `src/${entry}`,
     base: './',
     publicDir: false,
+    // 節約策比較フラグ(Phase 0、WU-7作業6)。build時に定数へ畳み込まれ、
+    // 識別子はproduction buildから消える(verify:costのFCP-BLD-FLAGで確認)。
+    // 比較buildは環境変数 MG_SAVINGS=false で生成する。
+    define: {
+      __MG_SAVINGS__: JSON.stringify(process.env['MG_SAVINGS'] !== 'false'),
+    },
     build: {
       outDir: resolve(import.meta.dirname, `dist/${entry}`),
       emptyOutDir: true,
