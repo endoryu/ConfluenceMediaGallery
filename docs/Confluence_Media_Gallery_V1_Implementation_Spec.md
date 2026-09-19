@@ -172,6 +172,8 @@ API呼び出しはログイン中ユーザーとして行い、そのユーザ�
 - `read:attachment:confluence`
 - `read:user:confluence`：詳細パネルで更新者の表示名を解決する場合のみ
 - `write:attachment:confluence`：thumbキャッシュ添付の生成・版更新・削除のみに使用する。ユーザーコンテンツの変更には使用しない
+- `read:content-details:confluence`：v1 attachment作成APIが `write:attachment:confluence` とペアで要求する（WU-6実測401および公式docs）
+- `delete:attachment:confluence`：thumbキャッシュのGC（v2 attachments delete）に使用する
 
 Attachment一覧・個別情報・Thumbnail APIは `read:attachment:confluence` を要求する。更新者名は `version.authorId` をユーザー情報へ解決するため、ViewerでCurrent項目が確定しPreview要求を発行した後にバックグラウンド取得する。
 
@@ -236,8 +238,8 @@ hover先読みの目的は、GalleryとViewerで同一のバージョン付きUR
 | Thumbnail／Preview | `GET /wiki/api/v2/attachments/{attachmentId}/thumbnail/download` |
 | Original download URL | `GET /wiki/rest/api/content/{pageId}/child/attachment/{attachmentId}/download`（302）を第一候補とし、一覧レスポンスの `downloadLink` とともにP0-2で検証して正本を確定する |
 | 更新者表示名 | `POST /wiki/api/v2/users-bulk` |
-| thumbキャッシュupload | `POST /wiki/rest/api/content/{pageId}/child/attachment`（新規）／`POST .../attachment/{attachmentId}/data`（版更新） |
-| thumbキャッシュ削除 | `DELETE /wiki/rest/api/content/{attachmentId}`（自己管理thumbのみ） |
+| thumbキャッシュupload | `PUT /wiki/rest/api/content/{pageId}/child/attachment`（create-or-update。同名は版更新）／`POST .../attachment/{attachmentId}/data`（明示的版更新） |
+| thumbキャッシュ削除 | `DELETE /wiki/api/v2/attachments/{attachmentId}`（自己管理thumbのみ。v1 DELETE /content/{id}はscope不一致401 — WU-6実測） |
 
 Thumbnail endpointは `version`、`width`、`height` を受け取り、302で実データURLへリダイレクトする。Original download endpointも302を返し、`version` を指定できる。実際のメディアURLを `<img>`、`<video>`、`<audio>` から直接ロードできるかは、Section 14のPoCゲートで確定する。
 
@@ -307,10 +309,11 @@ ViewerでCurrent項目が確定したら、Current Preview要求を発行した�
 
 | 指標 | 基準値 |
 |---|---|
-| 1セッション | 代表値 約258ポイント |
-| 1セッション想定範囲 | 約194〜320ポイント |
-| 20セッション／週 | 代表値 約5,160ポイント |
-| 20セッションが同一UTC時に集中 | 65,000ポイント／時の約7.9% |
+| 1セッション | 代表値 約157ポイント（P0-6実測：一覧51＋詳細60＋users-bulk 1＋thumbnail 302×30） |
+| 1セッション想定範囲 | 約142〜172ポイント（302応答のオブジェクト加点解釈に幅） |
+| セッション内2回目 | 0ポイント（全セッションキャッシュ） |
+| セッション跨ぎ2回目 | 約112ポイント（mediaはHTTP cacheで再要求なし — P0-1実証） |
+| 20セッションが同一UTC時に集中 | 65,000ポイント／時の約4.8%。飽和は約20テナント |
 
 この基準値はP0-6で、公式コスト式（基本1ポイント＋オブジェクト加点。コア1、ユーザー・権限2）による実測値で改訂する。支配項はメディア取得リクエスト（Thumbnail／Preview／Original）になる見込みであり、Thumbnail endpointの302、ネストされたlabel、Atlassian Media/CDNへの直接取得が何ポイントとして観測されるかを実測で確定する。評価はUTC毎時の最大集中量で行う。
 
@@ -472,7 +475,7 @@ cost-surface registerの有効期間は最終確認から31日とし、請求pla
 
 URLは版ごとに一意にする。Thumbnailとdownload endpointではAPIがサポートする `version` を指定する。リダイレクト後URLを利用する場合、そのURLが版固有であることをPoCで検証する。
 
-thumbキャッシュ添付の命名は `mg_thumbcache_<attachmentId>_v<version>_w<width>` とし、**拡張子を付けない**（誤ダウンロード・誤アップロード・ユーザー画像との混同を防ぐ。表示はupload時に設定するContent-Typeで成立し、native `<img>` は拡張子に依存しない）。ファイル名だけで所有者（本アプリ）・対象・版・サイズを一意に判定できる。一覧表示時、`mg_thumbcache_` prefixの添付はグリッドから除外し、対応する元Attachmentのタイル画像として使用する。同名uploadはConfluence仕様により同一添付の版更新となるため、重複生成は「余分な版」に収束し実害を持たない（冪等命名）。
+thumbキャッシュ添付の命名は `mg_thumbcache_<attachmentId>_v<version>_w<width>` とし、**拡張子を付けない**（誤ダウンロード・誤アップロード・ユーザー画像との混同を防ぐ。表示はupload時に設定するContent-Typeで成立し、native `<img>` は拡張子に依存しない）。ファイル名だけで所有者（本アプリ）・対象・版・サイズを一意に判定できる。一覧表示時、`mg_thumbcache_` prefixの添付はグリッドから除外し、対応する元Attachmentのタイル画像として使用する。冪等性はPUT（create-or-update）で成立させる：同名が存在すれば同一添付の版更新となり、重複生成は「余分な版」に収束し実害を持たない。POST（新規作成）は同名添付が存在すると400を返すため使用しない（WU-6実測）。
 
 ページ単位の整合データとして `mg_thumbcache_config`（拡張子なし・JSON）を同じ命名系で置く：生成済みthumbの台帳（attachmentId→version→widths→生成時刻）、ページ単位の生成無効化フラグ、schema version。正本はあくまで命名規則に基づく添付一覧のスキャンとし、configは高速化と設定の器である（壊れても添付スキャンから再構築可能）。この方式は追加scopeを要しない。
 
@@ -552,7 +555,7 @@ GalleryからModal contextへ、選択indexと並び順を再現できるcompact
 - 背景は暗色。
 - メディアは利用可能領域の中央に `contain` 表示する。
 - 詳細切替の `≡` ボタンを右上に配置する。
-- 閉じるボタンは、P0-4でForge fullscreen Modalにヘッダーが表示されないと確認できた場合に左上へ自前配置する。ヘッダーが表示される場合はForgeの閉じるボタンを正とする。
+- Forge fullscreen Modalはヘッダーを表示する（P0-4実測：1080p画面で実表示領域1920×841）。閉じるボタンはForgeヘッダーの閉じるボタンを正とし、自前の閉じるボタンは配置しない。
 - 前へ／次へボタンを左右端中央へ配置する。
 - 操作ボタンのhit areaは最低44 × 44 CSS pxとする。
 - ボタンおよびパネルの状態変化は即時とする。
@@ -576,36 +579,29 @@ GalleryからModal contextへ、選択indexと並び順を再現できるcompact
 
 ### 7.4 画像表示
 
-表示シーケンスは以下とする。
+表示シーケンスは以下とする（P0実測によりPreview段は廃止 — 中間解像度の配信手段が存在しない）。
 
 ```mermaid
 stateDiagram-v2
     [*] --> Shell
-    Shell --> Thumbnail: cached URL available
-    Thumbnail --> Preview: load + decode complete
-    Preview --> Original: load + decode complete
-    Thumbnail --> ErrorFallback: thumbnail failed
-    Preview --> Preview: original failed
+    Shell --> ThumbCache: thumbキャッシュあり
+    Shell --> Original: thumbキャッシュなし（原寸fallback）
+    ThumbCache --> Original: load + decode complete
+    ThumbCache --> ErrorFallback: thumb failed
+    Original --> Original: original failed（前段表示を維持）
 ```
 
 - Modalの起動は画像要求より先に行う。
-- ViewerはGalleryと同じThumbnail URLを最初に設定し、HTTPキャッシュ再利用を狙う。
-- PreviewとOriginalは別のpreload elementで `load` と `decode()` の完了を待つ。
+- ViewerはGalleryと同じthumbキャッシュURL（w640）を最初に設定し、HTTPキャッシュ再利用を狙う。
+- Originalは別のpreload elementで `load` と `decode()` の完了を待つ。
 - 差し替えは次のanimation frameで一度だけ行う。
 - 差し替えは即時とする。
-- Original失敗時はPreviewを維持する。
-- Preview失敗時はThumbnailを維持する。
+- Original失敗時はthumbキャッシュ表示を維持する。
 - すべて失敗した場合はエラーfallbackとRetry、Originalを開く／Downloadを表示する。
 
-### 7.5 Previewサイズ
+### 7.5 Previewサイズ（廃止）
 
-PreviewはViewer内の表示領域と `devicePixelRatio` から必要画素数を算出し、次のbucketから最小の十分な値を選ぶ。
-
-`1280 / 1920 / 2560 / 3840 px`
-
-- 既定上限は3840 px。
-- Originalの実寸が判明しており必要幅より小さい場合はOriginalを直接候補にできる。
-- Panelの開閉はメディア領域の寸法を維持するため、Previewは開閉前のものを使い続ける。
+中間解像度のPreview bucketは配信手段が存在しないため廃止する（P0-1／P0-2実測。proposals/2026-09-19_phase0-revisions.md）。Viewerの初期表示はthumbキャッシュ（w640）、確定表示はOriginalとする。Panelの開閉はメディア領域の寸法を維持するため、表示中の画像を使い続ける。
 
 ### 7.6 動画
 
@@ -841,6 +837,7 @@ Confluence Cloudのポイントクォータは枯渇時に毎時リセットま�
 - native `<img>`／`<video>`／`<audio>` の失敗はHTTPステータスを伴わないため、遷移条件の補助情報として扱う。
 - 短時間に閾値以上のmedia load失敗が連続した場合は、レート制限の疑いとして安価なREST要求（一覧の1件取得等）を1回発行し、ステータスを確認する。429なら `Blocked` へ遷移する。このprobeは指数バックオフとjitterを伴い、同時に1本だけ発行する。閾値・間隔はSection 18の定数とする。
 - probeの優先度はCurrent要求より下とする。Current要求が進行中ならその結果で判定する。
+- 公式のbetaヘッダー `Beta-RateLimit-Policy`／`Beta-RateLimit` も観測対象に含める（Phase 1でadapterの抽出対象へ追加。P0-6記録）。
 
 #### 11.1.2 cold start時の枯渇
 
@@ -1276,8 +1273,7 @@ V1は以下をすべて満たしたとき完了とする。
 |---|---|
 | タイル最小幅 | 220 CSS px |
 | タイル比率 | 4:3 |
-| Thumbnail最大幅 | 640 px |
-| Preview bucket | 1280 / 1920 / 2560 / 3840 px |
+| （Thumbnail最大幅／Preview bucketはP0実測により廃止。thumbキャッシュ幅の行を正とする） | — |
 | Preview同時取得 | 2 |
 | Original同時取得 | 1 |
 | Attachment詳細同時取得 | 2 |
