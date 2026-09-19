@@ -50,15 +50,17 @@ Phase 1のDoD(Phase1_Spec §8)は、**ユーザー確認2点を残して達成**
 
 ## 6. 上申キュー(§5形式)
 
-| ID | 発生WU | 事象 | 選択肢 | 推奨 | 影響範囲 |
-|---|---|---|---|---|---|
-| P1-E-05 | WU-7 | CDP throttlingがOOPIF macro iframeへ届かず、ガイド§8のネットワークプロファイル(100Mbps/50ms)を適用できない。LAN実測(スロットリングなし)+Cold=新規contextで計測した | a) 本計測定義(LAN実測)を§8の代替として承認 b) 手動DevTools throttlingで別途1回補正 | **a**(相対比較〈thumb有無・件数〉は有効。絶対値はLAN条件と明記済み) | WU-7証跡の有効性。以降のPhaseも同定義を使用 |
-| P1-E-06 | WU-7 | P0系E2Eはprobe UI前提のためPhase 1 buildで実行不能。P0-1/2/5/6は同等不変条件(正規形URL全件検査・許可host限定・セッションポイント再計測)で代替、P0-4はPhase 2で回帰 | a) 読み替えを承認(L3の「P0系E2Eの回帰実行」を同等不変条件と読む) b) probe UIを別resourceで併存維持 | **a**(bはbundle・保守コスト増) | WU-7証跡の有効性 |
-| P1-E-07 | WU-8 | cost-surface-register.md(保護対象)のCS-DEV-SPACE行「最終確認日」をPhase 1後確認で更新したい | a) Usage確認後にClaude Codeが日付更新(内容は最終確認日と参照snapshot追記のみ) b) ユーザーが直接編集 | **a** | register鮮度(31日) |
+| ID | 発生WU | 事象 | 選択肢 | 推奨 | 影響範囲 | 裁定 |
+|---|---|---|---|---|---|---|
+| P1-E-05 | WU-7 | CDP throttlingがOOPIF macro iframeへ届かず、ガイド§8のネットワークプロファイル(100Mbps/50ms)を適用できない。LAN実測(スロットリングなし)+Cold=新規contextで計測した | a) 本計測定義(LAN実測)を§8の代替として承認 b) 手動DevTools throttlingで別途1回補正 | **a**(相対比較〈thumb有無・件数〉は有効。絶対値はLAN条件と明記済み) | WU-7証跡の有効性。以降のPhaseも同定義を使用 | **a承認**(ユーザー、2026-09-20「すべて推奨どおり」) |
+| P1-E-06 | WU-7 | P0系E2Eはprobe UI前提のためPhase 1 buildで実行不能。P0-1/2/5/6は同等不変条件(正規形URL全件検査・許可host限定・セッションポイント再計測)で代替、P0-4はPhase 2で回帰 | a) 読み替えを承認(L3の「P0系E2Eの回帰実行」を同等不変条件と読む) b) probe UIを別resourceで併存維持 | **a**(bはbundle・保守コスト増) | WU-7証跡の有効性 | **a承認**(同上) |
+| P1-E-07 | WU-8 | cost-surface-register.md(保護対象)のCS-DEV-SPACE行「最終確認日」をPhase 1後確認で更新したい | a) Usage確認後にClaude Codeが日付更新(内容は最終確認日と参照snapshot追記のみ) b) ユーザーが直接編集 | **a** | register鮮度(31日) | **a承認**(同上)→更新実施済み |
 
-## 7. ユーザーへの依頼(残件)
+## 7. ユーザー確認の結果(2026-09-20)
 
-1. **本日21:00 JST(12:00 UTC)以降にDeveloper Console/BillingのUsageを一言確認**(全メトリクス0・USD 0.00・支払方法未登録)。この1回でP0-7の無条件確定とPhase 1 snapshotの確定を兼ねる
-2. 上申P1-E-05/P1-E-06/P1-E-07の裁定
-3. Phase 2(Fullscreen Viewer)着手の承認 → 承認後、Phase 2のL3仕様書を起草(§6手順)
-4. (任意)体感確認: MG-05/MG-06のグリッド表示・hoverタイトル・writer用手動操作ボタン
+1. Usage確認: **完了**(『USD0.00。未登録を確認』)。P0-7無条件確定・Phase 0/Phase 1 snapshot確定・register最終確認日更新(P1-E-07)
+2. 上申P1-E-05/06/07: **すべて推奨(a)どおり承認**
+3. Phase 2着手: **承認**(2026-09-20)
+4. 追加指示: グリッド線幅(タイル間隔)を2pxへ変更 → 実施済み(PR #27、--mg-gap 2px/--mg-pad 8px分離)
+
+**Phase 1クローズ。** 残る任意項目: 体感確認(MG-05/MG-06のグリッド・hoverタイトル・writer用手動操作ボタン)
