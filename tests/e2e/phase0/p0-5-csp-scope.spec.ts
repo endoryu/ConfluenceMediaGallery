@@ -13,7 +13,7 @@ import {
   listAttachments,
   openGalleryFrame,
   saveResult,
-} from './helpers';
+} from '../helpers';
 
 interface ConsoleRecord {
   type: string;

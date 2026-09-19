@@ -4,7 +4,7 @@
  * 実行タグ: 環境変数 MG_TAG(節約策on/off比較のbuild識別に使う)。
  */
 import { expect, test } from '@playwright/test';
-import { findPageIdByTitle, openGalleryFrame, saveResult } from './helpers';
+import { findPageIdByTitle, openGalleryFrame, saveResult } from '../helpers';
 
 const TAG = process.env['MG_TAG'] ?? 'default';
 
