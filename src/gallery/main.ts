@@ -90,7 +90,7 @@ async function init(): Promise<void> {
     };
 
     const onImageFailure = (item: AttachmentSummary): void => {
-      view.setTileError(item.attachmentId);
+      view.setTileError(item.attachmentId, item.kind);
       rateLimit.recordMediaFailure();
       diagnostics.record('error', `thumbnail load失敗: ${item.attachmentId}`);
       // 閾値超過時はレート制限疑いprobe(安価なREST 1件 — §11.1.1)
@@ -216,11 +216,11 @@ async function init(): Promise<void> {
 
     // load(Retry含む)→controller→viewの相互参照は呼び出し時解決の閉包で結ぶ
     const load = (): void => {
-      // Blocked中は新規要求を停止する(§11.1。本表示はWU-6)
+      // Blocked中は新規要求を停止し、手動再読み込みに委ねる(§11.1.2)
       if (!rateLimit.canIssueRequests()) {
         view.showStatus(
           'blocked',
-          `混雑のため待機中です(約${Math.ceil(rateLimit.retryAfterMs / 1000)}秒後に再試行できます)`,
+          `一覧を取得できませんでした(混雑中)。約${Math.max(1, Math.ceil(rateLimit.retryAfterMs / 1000))}秒後に再読み込みできます`,
         );
         return;
       }
@@ -258,6 +258,7 @@ async function init(): Promise<void> {
       api: cachedApi,
       pageId: context.pageId,
       view,
+      retryAfterMs: () => rateLimit.retryAfterMs,
       onFirstPage: () => {
         mark('p1.gallery.list.page1');
       },

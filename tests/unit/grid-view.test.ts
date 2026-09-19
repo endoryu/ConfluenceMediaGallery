@@ -89,22 +89,48 @@ describe('GridView', () => {
     expect(status?.querySelector('button')).toBeNull();
   });
 
-  it('タイルerror状態の設定・解除(§11の個別Retry用)', () => {
+  it('タイルerror状態は種別別placeholder+タイトル維持(§11)', () => {
     const root = makeShell();
     const view = new GridView(root, () => undefined, () => undefined);
-    view.appendTiles([makeItem('1')]);
+    view.appendTiles([makeItem('1'), makeItem('2', { kind: 'video' })]);
     const host = view.getMediaHost('1');
     expect(host?.classList.contains('mg-tile-media')).toBe(true);
     host?.append(document.createElement('img'));
 
-    view.setTileError('1');
+    view.setTileError('1', 'image');
     expect(view.isTileError('1')).toBe(true);
     expect(host?.querySelector('img')).toBeNull(); // 失敗imgは除去
-    expect(host?.textContent).toBe('⚠');
+    expect(host?.textContent).toBe('□');
+    view.setTileError('2', 'video');
+    expect(view.getMediaHost('2')?.textContent).toBe('▶');
+    // タイトル要素は維持される
+    expect(root.querySelector('.mg-tile[data-error="1"] .mg-tile-title')?.textContent).toBe(
+      'photo-1.png',
+    );
 
     view.clearTileError('1');
     expect(view.isTileError('1')).toBe(false);
     expect(host?.textContent).toBe('');
+  });
+
+  it('blocked状態は手動再読み込み導線を持つ(§11.1.2)', () => {
+    const root = makeShell();
+    let retried = 0;
+    const view = new GridView(root, () => undefined, () => {
+      retried += 1;
+    });
+    view.showStatus('blocked', '一覧を取得できませんでした(混雑中)');
+    const button = root.querySelector<HTMLButtonElement>('.mg-status button');
+    expect(button?.textContent).toBe('再読み込み');
+    button?.click();
+    expect(retried).toBe(1);
+  });
+
+  it('forbidden状態はRetry導線を持たない(§11: 権限不足)', () => {
+    const root = makeShell();
+    const view = new GridView(root, () => undefined, () => undefined);
+    view.showStatus('forbidden', '添付を表示する権限がありません');
+    expect(root.querySelector('.mg-status button')).toBeNull();
   });
 
   it('resetTilesでグリッドが空になり再appendできる', () => {

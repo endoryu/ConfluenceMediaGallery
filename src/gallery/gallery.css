@@ -107,6 +107,12 @@ body {
   visibility: hidden;
 }
 
+/* 表示切替はCSS :hover/:focus-visibleで即時(V1 §6.4。transition不使用) */
+.mg-tile:hover .mg-tile-title,
+.mg-tile:focus-visible .mg-tile-title {
+  visibility: visible;
+}
+
 .mg-retry {
   margin-left: 8px;
   font-size: 13px;

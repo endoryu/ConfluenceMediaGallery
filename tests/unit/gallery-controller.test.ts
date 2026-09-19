@@ -202,6 +202,61 @@ describe('GalleryController.loadAll', () => {
     expect(view.reorderCalls).toEqual([]);
   });
 
+  it('401/403は権限不足表示(Retryなし側のstate)', async () => {
+    const api = new MockConfluenceApi([makeItem('1')]);
+    api.setBehavior({ failStatus: 403 });
+    const view = new StubView();
+    const controller = new GalleryController({ api, pageId: 'page-1', view, raf: syncRaf });
+    const result = await controller.loadAll();
+    expect(result.ok).toBe(false);
+    expect(view.statuses.at(-1)).toEqual({
+      state: 'forbidden',
+      message: '添付を表示する権限がありません',
+    });
+  });
+
+  it('429はcold start表示(Retry-After目安つき — §11.1.2)', async () => {
+    const api = new MockConfluenceApi([makeItem('1')]);
+    api.setBehavior({ failStatus: 429 });
+    const view = new StubView();
+    const controller = new GalleryController({
+      api,
+      pageId: 'page-1',
+      view,
+      raf: syncRaf,
+      retryAfterMs: () => 90_000,
+    });
+    await controller.loadAll();
+    expect(view.statuses.at(-1)?.state).toBe('blocked');
+    expect(view.statuses.at(-1)?.message).toContain('混雑中');
+    expect(view.statuses.at(-1)?.message).toContain('約90秒');
+  });
+
+  it('一部ページ失敗は取得済みを維持し「一部を取得できませんでした」', async () => {
+    const items = Array.from({ length: 60 }, (_, i) => makeItem(String(i + 1)));
+    const inner = new MockConfluenceApi(items);
+    let calls = 0;
+    const api = new Proxy(inner, {
+      get(target, prop, receiver) {
+        if (prop === 'listAttachments') {
+          return (pageId: string, cursor?: string, limit?: number) => {
+            calls += 1;
+            if (calls >= 2) return Promise.reject(new Error('Confluence API 500 (list)'));
+            return target.listAttachments(pageId, cursor, limit);
+          };
+        }
+        return Reflect.get(target, prop, receiver) as unknown;
+      },
+    });
+    const view = new StubView();
+    const controller = new GalleryController({ api, pageId: 'page-1', view, raf: syncRaf });
+    const result = await controller.loadAll();
+    expect(result.ok).toBe(false);
+    expect(view.appendedBatches.length).toBe(1); // 取得済み1ページ分は表示済みのまま
+    expect(view.resetCount).toBe(1); // 失敗時に再resetしない
+    expect(view.statuses.at(-1)?.message).toBe('一部を取得できませんでした');
+  });
+
   it('一覧失敗はerror表示、Retry(再loadAll)で復旧しresetTilesされる', async () => {
     const api = new MockConfluenceApi([makeItem('1')]);
     api.setBehavior({ failStatus: 500 });
