@@ -81,12 +81,14 @@ const RULES = {
   'FCP-SRC-HANDLER-ENTRY': 'entry が global error handler を登録していない',
   'FCP-SRC-HANDLER-CONSOLE': 'global error handler がconsoleを呼ぶ',
   'FCP-SRC-HANDLER-RETHROW': 'global error handler 登録ファイルにthrowがある',
+  'FCP-SRC-HANDLER-SYNC': 'click/pointerenter handlerにawaitが含まれる(同期処理とrequest発行のみ — V1 §4.5.2)',
   // 4. build
   'FCP-BLD-MISSING': 'production build 出力が存在しない',
   'FCP-BLD-CONSOLE': 'build出力に console.error / console.log が残存',
   'FCP-BLD-COMM': 'build出力に直接通信APIが残存',
   'FCP-BLD-FORGE-API': 'build出力に @forge/bridge 以外の@forge/* 参照',
   'FCP-BLD-ORIGIN': 'build出力に許可リスト外のURL literal',
+  'FCP-BLD-FLAG': '節約策比較フラグ識別子がproduction buildに残存',
   // 5. CI / repository
   'FCP-CI-MISSING': 'CI workflow が存在しない',
   'FCP-CI-PARSE': 'CI workflow が解析できない',
@@ -352,6 +354,24 @@ export function analyzeLockfile(lock, pkg, policy, opts = {}, target = 'package-
 
 // ---------- 3. source AST ----------
 
+/** handler本体に直接のawaitがあるか(入れ子の関数内は対象外=fire-and-forget許容) */
+function containsDirectAwait(fnNode) {
+  let found = false;
+  const walk = (node) => {
+    if (found) return;
+    if (node !== fnNode && (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node))) {
+      return; // 入れ子関数の中は別コンテキスト
+    }
+    if (ts.isAwaitExpression(node)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(node, walk);
+  };
+  ts.forEachChild(fnNode, walk);
+  return found;
+}
+
 export function analyzeSourceFile(fileName, text, policy) {
   const findings = [];
   const target = rel(path.isAbsolute(fileName) ? fileName : path.join(ROOT, fileName));
@@ -420,6 +440,18 @@ export function analyzeSourceFile(fileName, text, policy) {
           const eventName = node.arguments[0].text;
           if (eventName === 'error') state.registersError = true;
           if (eventName === 'unhandledrejection') state.registersRejection = true;
+          // V1 §4.5.2: click/pointerenter handlerは同期処理とrequest発行のみ(直接のawait禁止)
+          if ((eventName === 'click' || eventName === 'pointerenter') && node.arguments[1]) {
+            const handler = node.arguments[1];
+            if (
+              (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler)) &&
+              containsDirectAwait(handler)
+            ) {
+              findings.push(
+                finding('FCP-SRC-HANDLER-SYNC', 'RED', target, `${eventName} handlerにawait`),
+              );
+            }
+          }
         }
       }
     }
@@ -509,6 +541,10 @@ export function analyzeBuild(policy) {
     }
     if (/@forge\/(?!bridge)/.test(text)) {
       findings.push(finding('FCP-BLD-FORGE-API', 'RED', target, 'non-bridge @forge/* reference in build output'));
+    }
+    // 節約策比較フラグはvite defineで定数畳み込みされ識別子が残らないこと(V1 §4.7.2/CLAUDE.md §8)
+    if (/__MG_SAVINGS/.test(text)) {
+      findings.push(finding('FCP-BLD-FLAG', 'RED', target, 'savings flag identifier in build output'));
     }
     for (const url of text.match(/https?:\/\/[A-Za-z0-9.-]+[^\s"'`<>)]*/g) ?? []) {
       if (!policy.build.allowedUrlPrefixes.some((p) => url.startsWith(p))) {
