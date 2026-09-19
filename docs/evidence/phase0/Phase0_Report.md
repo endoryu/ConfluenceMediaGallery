@@ -61,7 +61,13 @@
 
 計測条件: 標準側=Chrome+CDP throttling 100Mbps/50ms・cache制御、Cold/Warm各5回。probe側=Warm5回(macro iframeはOOPIFのためCDP throttling/cache制御が届かない制約あり。数値は無throttle参考)。
 
-<!-- P0-9-RESULTS -->
+| 画像 | 標準 Cold(med/P95) | 標準 Warm | 標準の表示上限 | probe paint(med) | probe 原寸表示(med) |
+|---|---|---|---|---|---|
+| 1080p | 449/478ms | 53/93ms | 1920 | 34ms | 610ms |
+| 4K | 482/510ms | 54/102ms | 3840 | 34ms | 657ms |
+| 8K | 502/512ms | 56/107ms | **4096(rendition上限)** | 34ms | 611ms(**原寸7680表示**) |
+
+主要知見: 標準viewerは8Kを4096px renditionに縮退。probe Viewerは原寸表示可能(品質優位・転送負担はwriter thumbキャッシュ設計で緩和)。詳細・条件差・制約は `docs/evidence/phase0/baseline/standard-viewer.md`。
 
 体感評価: (ユーザー記入欄 — 未記入)
 

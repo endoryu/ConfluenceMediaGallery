@@ -58,32 +58,52 @@ async function measureStandardOnce(
   page: Page,
   file: string,
   minWidth: number,
-): Promise<{ hiResMs: number }> {
-  const embedded = page.locator(`img[src*="${encodeURIComponent(file)}"], img[src*="${file}"]`).first();
-  await embedded.scrollIntoViewIfNeeded();
+): Promise<{ hiResMs: number; maxNatural: number }> {
+  // 埋め込み画像は「<filename> を開く」というaccessible nameのbuttonとしてrenderされる。
+  // SSR placeholderのhydration前はclickが空振りするため、settle待ち+開くまでリトライする
+  const embedded = page.getByRole('button', { name: `${file} を開く` }).first();
+  await embedded.waitFor({ state: 'attached', timeout: 30_000 });
+  await embedded.scrollIntoViewIfNeeded({ timeout: 30_000 });
+  await page.waitForTimeout(2500);
   const t0 = Date.now();
-  await embedded.click();
+  let opened = false;
+  for (let attempt = 0; attempt < 3 && !opened; attempt += 1) {
+    await embedded.click({ force: true, timeout: 15_000 });
+    opened = await page
+      .waitForFunction(
+        () => [...document.images].some((i) => i.naturalWidth >= 700 && i.getBoundingClientRect().width > 400),
+        undefined,
+        { timeout: 8_000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+  }
+  // 標準viewerのhi-res renditionは上限がある可能性(8Kで原寸未満)。閾値はmin(0.9w, 3500)
+  const target = Math.min(minWidth * 0.9, 3500);
   await page.waitForFunction(
     ({ w }) =>
       [...document.images].some(
-        (i) => i.naturalWidth >= w * 0.9 && i.getBoundingClientRect().width > 400,
+        (i) => i.naturalWidth >= w && i.getBoundingClientRect().width > 400,
       ),
-    { w: minWidth },
-    { timeout: 90_000 },
+    { w: target },
+    { timeout: 120_000 },
   );
   const hiResMs = Date.now() - t0;
+  const maxNatural = await page.evaluate(() =>
+    Math.max(0, ...[...document.images].filter((i) => i.getBoundingClientRect().width > 400).map((i) => i.naturalWidth)),
+  );
   await page.keyboard.press('Escape');
   await page
     .waitForFunction(
       ({ w }) =>
         ![...document.images].some(
-          (i) => i.naturalWidth >= w * 0.9 && i.getBoundingClientRect().width > 400,
+          (i) => i.naturalWidth >= w && i.getBoundingClientRect().width > 400,
         ),
-      { w: minWidth },
+      { w: target },
       { timeout: 15_000 },
     )
     .catch(() => undefined);
-  return { hiResMs };
+  return { hiResMs, maxNatural };
 }
 
 test('WU-9 標準Viewer baseline(Cold/Warm各5回×3画像)', async ({ page, request }) => {
@@ -100,6 +120,7 @@ test('WU-9 標準Viewer baseline(Cold/Warm各5回×3画像)', async ({ page, req
     const cold: number[] = [];
     const warm: number[] = [];
     let coldLongTasks = 0;
+    let maxNaturalSeen = 0;
     let bytesStart = recorder.records.length;
 
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
@@ -108,8 +129,9 @@ test('WU-9 標準Viewer baseline(Cold/Warm各5回×3画像)', async ({ page, req
         waitUntil: 'domcontentloaded',
       });
       await installLongTaskObserver(page);
-      const { hiResMs } = await measureStandardOnce(page, image.file, image.width);
+      const { hiResMs, maxNatural } = await measureStandardOnce(page, image.file, image.width);
       cold.push(hiResMs);
+      maxNaturalSeen = Math.max(maxNaturalSeen, maxNatural);
       coldLongTasks += await readLongTasks(page);
     }
     const coldResponses = recorder.records.length - bytesStart;
@@ -131,9 +153,10 @@ test('WU-9 標準Viewer baseline(Cold/Warm各5回×3画像)', async ({ page, req
       coldLongTasks,
       coldMediaResponses: coldResponses,
       warmMediaResponses: warmResponses,
+      maxNaturalSeen,
     };
     console.log(
-      `[標準] ${image.file}: cold med/p95=${summarize(cold).median}/${summarize(cold).p95}ms warm=${summarize(warm).median}/${summarize(warm).p95}ms 応答cold/warm=${coldResponses}/${warmResponses} longtask=${coldLongTasks}`,
+      `[標準] ${image.file}: cold med/p95=${summarize(cold).median}/${summarize(cold).p95}ms warm=${summarize(warm).median}/${summarize(warm).p95}ms 応答cold/warm=${coldResponses}/${warmResponses} longtask=${coldLongTasks} maxNatural=${maxNaturalSeen}`,
     );
   }
   const path = saveResult('p0-9-standard', { results, mediaSample: recorder.snapshot().slice(0, 20) });
