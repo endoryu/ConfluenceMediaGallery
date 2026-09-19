@@ -74,4 +74,27 @@ for (const file of files) {
   if (uploaded % 10 === 0) process.stdout.write(`upload ${uploaded}/${files.length}…\n`);
 }
 process.stdout.write(`完了: upload=${uploaded} skip=${skipped}(全${files.length}件)pageId=${pageId}\n`);
+
+// WU-9: 標準プレビュー計測用に代表画像3枚を本文へ埋め込む(冪等)
+const pageRes = await ctx.get(`${SITE}/wiki/rest/api/content/${pageId}?expand=body.storage,version`);
+const pageJson = await pageRes.json();
+const body = pageJson.body?.storage?.value ?? '';
+if (body.includes('mg05-8k.jpg')) {
+  process.stdout.write('埋め込み画像は既存\n');
+} else {
+  const imgs = ['mg05-1080p.jpg', 'mg05-4k.jpg', 'mg05-8k.jpg']
+    .map((f) => `<p><ac:image ac:width="240"><ri:attachment ri:filename="${f}" /></ac:image></p>`)
+    .join('');
+  const putRes = await ctx.put(`${SITE}/wiki/rest/api/content/${pageId}`, {
+    data: {
+      id: pageId,
+      type: 'page',
+      title: TITLE,
+      space: { key: spaceKey },
+      body: { storage: { value: body + imgs, representation: 'storage' } },
+      version: { number: (pageJson.version?.number ?? 1) + 1 },
+    },
+  });
+  process.stdout.write(`埋め込み画像追加: status=${putRes.status()}\n`);
+}
 await ctx.dispose();
