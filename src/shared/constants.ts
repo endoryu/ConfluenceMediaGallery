@@ -12,6 +12,9 @@ export const DEFAULT_LIST_LIMIT = 50;
 /** Thumbnail width候補(Phase0_Spec §11、V1仕様書 §6.3の上限640) */
 export const THUMBNAIL_WIDTH_CANDIDATES = [320, 640] as const;
 
+/** タイルDOMの1frameあたり追加上限(V1仕様書 §6.2、Phase1_Spec §11) */
+export const TILES_PER_FRAME = 50;
+
 /** レート制限probe発火閾値: この時間窓内のmedia load失敗数(V1仕様書 §18) */
 export const RATE_PROBE_FAILURE_WINDOW_MS = 10_000;
 export const RATE_PROBE_FAILURE_THRESHOLD = 3;
