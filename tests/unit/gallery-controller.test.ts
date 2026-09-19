@@ -2,11 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MockConfluenceApi } from '../../src/shared/api/mock-confluence-api';
 import type { AttachmentSummary } from '../../src/shared/types/media';
 import type { GalleryStatusState, GalleryView } from '../../src/gallery/gallery-controller';
-import {
-  GalleryController,
-  compareGalleryOrder,
-  isGalleryItem,
-} from '../../src/gallery/gallery-controller';
+import { GalleryController, compareGalleryOrder } from '../../src/gallery/gallery-controller';
+import { isGalleryItem } from '../../src/gallery/media-items';
 
 function makeItem(
   id: string,
@@ -150,6 +147,9 @@ describe('GalleryController.loadAll', () => {
 
     expect(result.items.map((i) => i.attachmentId)).toEqual(['1']);
     expect(view.appendedBatches).toEqual([['1']]);
+    // WU-2: thumb対応表が構築される(mg_thumbcache_1_v1_w320 → 添付1のv1に有効)
+    expect(result.model?.thumbsByTarget.get('1')?.[0]?.cacheAttachmentId).toBe('2');
+    expect(result.model?.staleThumbs).toEqual([]);
   });
 
   it('0件はempty表示でok', async () => {

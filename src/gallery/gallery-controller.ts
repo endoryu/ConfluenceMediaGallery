@@ -7,6 +7,8 @@
 import type { ConfluenceApi } from '../shared/api/confluence-api';
 import type { AttachmentSummary } from '../shared/types/media';
 import { DEFAULT_LIST_LIMIT } from '../shared/constants';
+import type { MediaModel } from './media-items';
+import { buildMediaModel, isGalleryItem } from './media-items';
 
 export type GalleryStatusState = 'loading' | 'error' | 'empty' | 'blocked';
 
@@ -39,12 +41,8 @@ export interface GalleryLoadResult {
   readonly ok: boolean;
   /** セッション正本(確定順)。okがfalseのときは空 */
   readonly items: readonly AttachmentSummary[];
-}
-
-/** グリッド表示対象か(自己管理thumbキャッシュ添付と非メディアを除外。詳細はWU-2) */
-export function isGalleryItem(item: AttachmentSummary): boolean {
-  if (item.title.startsWith('mg_thumbcache_')) return false;
-  return item.kind === 'image' || item.kind === 'video' || item.kind === 'audio';
+  /** thumb対応表・stale・config(WU-2)。成功時のみ */
+  readonly model?: MediaModel;
 }
 
 /** 更新日時降順、同一日時はattachmentId昇順(V1 §6.1の固定順序) */
@@ -84,7 +82,7 @@ export class GalleryController {
     this.loading = true;
     const { api, pageId, view, onDiagnostic } = this.options;
     const limit = this.options.limit ?? DEFAULT_LIST_LIMIT;
-    const all: AttachmentSummary[] = [];
+    const raw: AttachmentSummary[] = [];
     let firstBatchDone = false;
     try {
       view.resetTiles();
@@ -92,8 +90,8 @@ export class GalleryController {
       let cursor: string | undefined;
       do {
         const page = await api.listAttachments(pageId, cursor, limit);
+        raw.push(...page.items);
         const media = page.items.filter(isGalleryItem);
-        all.push(...media);
         if (media.length > 0) {
           const isFirst = !firstBatchDone;
           firstBatchDone = true;
@@ -113,22 +111,27 @@ export class GalleryController {
         cursor = page.nextCursor;
       } while (cursor !== undefined);
 
-      if (all.length === 0) {
+      // 分類・thumb対応付け(WU-2)。一覧全件から対応表を構築する
+      const model = buildMediaModel(raw);
+      if (model.media.length === 0) {
         view.showStatus('empty', 'このページにメディアの添付はありません');
-        return { ok: true, items: [] };
+        return { ok: true, items: [], model };
       }
       // 全件取得完了後に順序を確定する。再配置は一度(§6.1)
-      all.sort(compareGalleryOrder);
-      view.reorderTiles(all.map((item) => item.attachmentId));
-      onDiagnostic?.('info', `gallery: 一覧確定 ${all.length}件`);
-      return { ok: true, items: all };
+      const items = [...model.media].sort(compareGalleryOrder);
+      view.reorderTiles(items.map((item) => item.attachmentId));
+      onDiagnostic?.(
+        'info',
+        `gallery: 一覧確定 ${items.length}件(thumb対応${model.thumbsByTarget.size}件、stale ${model.staleThumbs.length}件)`,
+      );
+      return { ok: true, items, model };
     } catch (error) {
       onDiagnostic?.(
         'error',
         `gallery: 一覧取得失敗(${error instanceof Error ? error.message : 'unknown'})`,
       );
       view.showStatus('error', '添付一覧を取得できませんでした');
-      return { ok: false, items: all };
+      return { ok: false, items: [] };
     } finally {
       this.loading = false;
     }
