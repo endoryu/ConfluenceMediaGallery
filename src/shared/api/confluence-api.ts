@@ -60,6 +60,25 @@ export interface BinaryFetchOptions {
   readonly range?: string;
 }
 
+/**
+ * G2 probe(P0-8後半): mg_thumbcache_* 添付のupload/版更新/削除。
+ * write:attachment:confluence の用途は自己管理thumb添付に限る(V1 §3.3)。
+ */
+export interface WriteProbeApi {
+  uploadAttachment(
+    pageId: string,
+    fileName: string,
+    blob: Blob,
+  ): Promise<{ status: number; attachmentId?: string; note?: string }>;
+  updateAttachmentData(
+    pageId: string,
+    attachmentId: string,
+    fileName: string,
+    blob: Blob,
+  ): Promise<{ status: number; note?: string }>;
+  deleteAttachment(attachmentId: string): Promise<{ status: number; note?: string }>;
+}
+
 export interface BinaryFetchResult {
   readonly ok: boolean;
   readonly status: number;

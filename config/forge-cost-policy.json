@@ -13,7 +13,9 @@
     "allowedScopes": [
       "read:attachment:confluence",
       "read:user:confluence",
-      "write:attachment:confluence"
+      "write:attachment:confluence",
+      "read:content-details:confluence",
+      "delete:attachment:confluence"
     ],
     "allowedAppKeys": ["id", "runtime"],
     "deniedKeyRules": {
@@ -64,6 +66,10 @@
     "bridgeAllowedImports": ["requestConfluence", "Modal", "events", "router", "view"],
     "bridgeAllowedImportDirs": ["src/shared/api"],
     "handlerEntryFiles": ["src/gallery/main.ts", "src/viewer/main.ts"]
+  },
+  "runtimeAllowlist": {
+    "$comment": "P0-5実測で確定したredirect先media host(L2 §12のallowlist検証の初期値。Phase 1でsrc/shared/apiの検証ロジックが参照)",
+    "mediaHosts": ["api.media.atlassian.com"]
   },
   "build": {
     "distDir": "dist",

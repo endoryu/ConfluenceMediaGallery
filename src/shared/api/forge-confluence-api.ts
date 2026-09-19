@@ -11,12 +11,13 @@ import type {
   RedirectProbeResult,
   ResponseMetaListener,
   ThumbnailProbeApi,
+  WriteProbeApi,
 } from './confluence-api';
 import { extractRateLimitHeaders } from './confluence-api';
 import type { V2AttachmentJson } from './v2-mapping';
 import { extractCursor, toSummary } from './v2-mapping';
 
-export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
+export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi, WriteProbeApi {
   constructor(
     private readonly siteBaseUrl: string,
     private readonly onResponseMeta?: ResponseMetaListener,
@@ -122,6 +123,85 @@ export class ForgeConfluenceApi implements ConfluenceApi, ThumbnailProbeApi {
     return this.redirectProbe(
       `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}/thumbnail/download?${params.toString()}`,
     );
+  }
+
+  async uploadAttachment(
+    pageId: string,
+    fileName: string,
+    blob: Blob,
+  ): Promise<{ status: number; attachmentId?: string; note?: string }> {
+    try {
+      const form = new FormData();
+      form.append('file', blob, fileName);
+      form.append('minorEdit', 'true');
+      // PUT = create-or-update(同名添付は版更新)。POSTは同名400のため不使用(WU-6実測)
+      const path = `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment`;
+      const response = await requestConfluence(path, {
+        method: 'PUT',
+        headers: { 'X-Atlassian-Token': 'nocheck' },
+        body: form,
+      });
+      this.notify(path, response);
+      if (!response.ok) {
+        let note: string | undefined;
+        try {
+          note = (await response.text()).slice(0, 300);
+        } catch {
+          note = undefined;
+        }
+        return note === undefined ? { status: response.status } : { status: response.status, note };
+      }
+      const json = (await response.json()) as { results?: { id?: string }[] };
+      const attachmentId = json.results?.[0]?.id;
+      return attachmentId ? { status: response.status, attachmentId } : { status: response.status };
+    } catch (error) {
+      return { status: -1, note: error instanceof Error ? error.message : 'unknown' };
+    }
+  }
+
+  async updateAttachmentData(
+    pageId: string,
+    attachmentId: string,
+    fileName: string,
+    blob: Blob,
+  ): Promise<{ status: number; note?: string }> {
+    try {
+      const form = new FormData();
+      form.append('file', blob, fileName);
+      form.append('minorEdit', 'true');
+      const path = `/wiki/rest/api/content/${encodeURIComponent(pageId)}/child/attachment/${encodeURIComponent(attachmentId)}/data`;
+      const response = await requestConfluence(path, {
+        method: 'POST',
+        headers: { 'X-Atlassian-Token': 'nocheck' },
+        body: form,
+      });
+      this.notify(path, response);
+      return { status: response.status };
+    } catch (error) {
+      return { status: -1, note: error instanceof Error ? error.message : 'unknown' };
+    }
+  }
+
+  async deleteAttachment(attachmentId: string): Promise<{ status: number; note?: string }> {
+    try {
+      // v2 attachments delete(要求scope: delete:attachment:confluence)。
+      // v1 DELETE /content/{id} はWU-6実測で401(scope不一致)のため不使用
+      const path = `/wiki/api/v2/attachments/${encodeURIComponent(attachmentId)}`;
+      const response = await requestConfluence(path, { method: 'DELETE' });
+      this.notify(path, response);
+      if (!response.ok && response.status !== 204) {
+        let note: string | undefined;
+        try {
+          note = (await response.text()).slice(0, 200);
+        } catch {
+          note = undefined;
+        }
+        return note === undefined ? { status: response.status } : { status: response.status, note };
+      }
+      return { status: response.status };
+    } catch (error) {
+      return { status: -1, note: error instanceof Error ? error.message : 'unknown' };
+    }
   }
 
   async fetchBinary(path: string, opts?: BinaryFetchOptions): Promise<BinaryFetchResult> {
