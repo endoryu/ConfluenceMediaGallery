@@ -5,6 +5,7 @@
  * ViewerコードはGallery bundleに含めない(CLAUDE.md §8)。
  */
 import './viewer.css';
+import { RateLimitStateMachine } from '../shared/api/rate-limit-state';
 import { closeView, getModalContext } from '../shared/api/view-context';
 import { DiagnosticBuffer } from '../shared/diagnostics/diagnostic-buffer';
 import { registerGlobalErrorHandler } from '../shared/diagnostics/global-error-handler';
@@ -50,9 +51,17 @@ async function init(): Promise<void> {
   if (snapshot.t0 > 0) {
     diagnostics.record('info', `viewer: dclDelta=${dclAtEpoch - snapshot.t0}ms`);
   }
+  // 縮退状態をsnapshotから復元(§11.1「双方で共有」 — WU-4)
+  const rateLimit = new RateLimitStateMachine();
+  if (snapshot.rateLimit) rateLimit.restoreState(snapshot.rateLimit);
+  rateLimit.onChange((next, prev) => {
+    diagnostics.record('state', `rate-limit: ${prev} -> ${next}`);
+  });
+
   const app = new ViewerApp({
     root,
     snapshot,
+    rateLimit,
     onCloseRequest: () => {
       closeView(); // Esc自前handler→view.close(§7.3)
     },
