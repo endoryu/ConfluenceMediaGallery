@@ -1,11 +1,3 @@
-# Phase2_Spec ドラフト(承認後に docs/phases/Phase2_Spec.md へ配置)
-
-- 起案: Claude Code(2026-09-20)
-- 根拠: V1仕様書 §16 Phase 2、§4.1、§7、§9、§11.1.3、§13、Phase1_Report(Phase 2着手承認2026-09-20)、P0-4実測
-- 状態: 承認済み(ユーザー、2026-09-20)→ `docs/phases/Phase2_Spec.md` へ反映済み。ズーム追加は別proposal(`2026-09-20_viewer-zoom.md`)で裁定中
-
----
-
 # Confluence Media Gallery Phase 2 仕様書(Viewer最小実装)
 
 | 項目 | 内容 |
@@ -15,6 +7,7 @@
 | 対象 | V1仕様書 §16 Phase 2(separate Viewer entry、fullscreen Modal、画像表示、close・前後移動・キーボード・focus復帰、縮退の待機表示§11.1.3) |
 | 実装 | Claude Code |
 | 裁定・承認 | ユーザー |
+| 承認 | ユーザー(2026-09-20。元proposal: `docs/proposals/2026-09-20_phase2-spec-draft.md`) |
 
 ## 0. 位置づけと読み替え
 
