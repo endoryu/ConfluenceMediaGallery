@@ -25,7 +25,7 @@
   "estimatedCostUsd": 0.0,
   "paymentMethodRegistered": false,
   "baselineDiff": "全メトリクス増分0見込み(Custom UIのみ。Function/KVS等の課金面は静的ゲートで不使用を保証、cost-guard全commit GREEN)",
-  "confirmedBy": "(未確認 — 本日12:00 UTC更新後のユーザー目視で記入)",
+  "confirmedBy": "ユーザー(2026-09-20、12:00 UTC更新後のDeveloper Console/Billing目視。『USD0.00。未登録を確認』)",
   "recordedBy": "Claude Code",
-  "judgement": "GREEN(暫定。ユーザーの一言確認で確定)"
+  "judgement": "GREEN(確定。2026-09-20ユーザー確認済み)"
 }
