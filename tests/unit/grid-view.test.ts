@@ -89,6 +89,24 @@ describe('GridView', () => {
     expect(status?.querySelector('button')).toBeNull();
   });
 
+  it('タイルerror状態の設定・解除(§11の個別Retry用)', () => {
+    const root = makeShell();
+    const view = new GridView(root, () => undefined, () => undefined);
+    view.appendTiles([makeItem('1')]);
+    const host = view.getMediaHost('1');
+    expect(host?.classList.contains('mg-tile-media')).toBe(true);
+    host?.append(document.createElement('img'));
+
+    view.setTileError('1');
+    expect(view.isTileError('1')).toBe(true);
+    expect(host?.querySelector('img')).toBeNull(); // 失敗imgは除去
+    expect(host?.textContent).toBe('⚠');
+
+    view.clearTileError('1');
+    expect(view.isTileError('1')).toBe(false);
+    expect(host?.textContent).toBe('');
+  });
+
   it('resetTilesでグリッドが空になり再appendできる', () => {
     const root = makeShell();
     const view = new GridView(root, () => undefined, () => undefined);

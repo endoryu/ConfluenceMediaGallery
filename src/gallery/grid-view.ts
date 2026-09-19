@@ -105,6 +105,40 @@ export class GridView implements GalleryView {
     this.grid.append(fragment);
   }
 
+  /** タイル画像の載せ先(.mg-tile-media)。WU-4のTileLoaderが使う */
+  getMediaHost(attachmentId: string): HTMLElement | null {
+    return this.tilesById.get(attachmentId)?.querySelector<HTMLElement>('.mg-tile-media') ?? null;
+  }
+
+  /** Thumbnail失敗のerror表示(V1 §11)。tile click=個別Retry(WU-4) */
+  setTileError(attachmentId: string): void {
+    const li = this.tilesById.get(attachmentId);
+    const tile = li?.querySelector<HTMLButtonElement>('.mg-tile');
+    const media = li?.querySelector<HTMLElement>('.mg-tile-media');
+    if (!tile || !media) return;
+    tile.dataset['error'] = '1';
+    media.querySelector('img')?.remove();
+    media.textContent = '⚠';
+  }
+
+  clearTileError(attachmentId: string): void {
+    const li = this.tilesById.get(attachmentId);
+    const tile = li?.querySelector<HTMLButtonElement>('.mg-tile');
+    const media = li?.querySelector<HTMLElement>('.mg-tile-media');
+    if (!tile || !media) return;
+    delete tile.dataset['error'];
+    media.textContent = '';
+  }
+
+  isTileError(attachmentId: string): boolean {
+    return (
+      this.tilesById
+        .get(attachmentId)
+        ?.querySelector<HTMLButtonElement>('.mg-tile')
+        ?.dataset['error'] === '1'
+    );
+  }
+
   resetTiles(): void {
     this.grid.textContent = '';
     this.tilesById.clear();
