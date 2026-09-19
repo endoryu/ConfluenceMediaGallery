@@ -39,7 +39,12 @@ describe('GridView', () => {
     expect(tiles[0]?.getAttribute('aria-label')).toBe('photo-1.png');
     // タイトル要素は初回DOM生成時から存在する
     expect(tiles[1]?.querySelector('.mg-tile-title')?.textContent).toBe('clip.mp4');
-    expect(tiles[1]?.querySelector('.mg-tile-media')?.textContent).toBe('動画');
+    // 動画・音声は種別アイコン+汎用タイル(§6.2)。装飾はaria-hidden
+    const media = tiles[1]?.querySelector('.mg-tile-media');
+    expect(media?.classList.contains('mg-tile-media--video')).toBe(true);
+    expect(media?.textContent).toBe('▶');
+    expect(media?.getAttribute('aria-hidden')).toBe('true');
+    expect(tiles[0]?.querySelector('.mg-tile-media')?.textContent).toBe('');
   });
 
   it('同一attachmentIdの再appendは無視する', () => {

@@ -6,7 +6,7 @@
  */
 import type { ConfluenceApi } from '../shared/api/confluence-api';
 import type { AttachmentSummary } from '../shared/types/media';
-import { DEFAULT_LIST_LIMIT } from '../shared/constants';
+import { DEFAULT_LIST_LIMIT, TILES_PER_FRAME } from '../shared/constants';
 import type { MediaModel } from './media-items';
 import { buildMediaModel, isGalleryItem } from './media-items';
 
@@ -96,17 +96,22 @@ export class GalleryController {
           const isFirst = !firstBatchDone;
           firstBatchDone = true;
           if (isFirst) this.options.onFirstPage?.();
-          // 1ページ目応答後、次のanimation frameで最初のタイルbatchを反映(§13.3)
-          await new Promise<void>((resolve) => {
-            this.raf(() => {
-              view.appendTiles(media);
-              if (isFirst) {
-                view.clearStatus();
-                this.options.onFirstBatch?.();
-              }
-              resolve();
+          // 1ページ目応答後、次のanimation frameで最初のタイルbatchを反映(§13.3)。
+          // タイルDOMは1frameあたりTILES_PER_FRAME件までに分割して追加する(§6.2)
+          for (let offset = 0; offset < media.length; offset += TILES_PER_FRAME) {
+            const chunk = media.slice(offset, offset + TILES_PER_FRAME);
+            const isFirstChunk = isFirst && offset === 0;
+            await new Promise<void>((resolve) => {
+              this.raf(() => {
+                view.appendTiles(chunk);
+                if (isFirstChunk) {
+                  view.clearStatus();
+                  this.options.onFirstBatch?.();
+                }
+                resolve();
+              });
             });
-          });
+          }
         }
         cursor = page.nextCursor;
       } while (cursor !== undefined);

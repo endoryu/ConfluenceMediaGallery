@@ -119,6 +119,30 @@ describe('GalleryController.loadAll', () => {
     expect(listCalls.length).toBe(3);
   });
 
+  it('1ページがTILES_PER_FRAMEを超える場合はframe分割で追加する(§6.2)', async () => {
+    const items = Array.from({ length: 120 }, (_, i) => makeItem(String(i + 1)));
+    const api = new MockConfluenceApi(items);
+    const view = new StubView();
+    let rafCalls = 0;
+    const controller = new GalleryController({
+      api,
+      pageId: 'page-1',
+      view,
+      limit: 250, // 1ページで120件を返させる(mockはlimitでslice)
+      raf: (cb) => {
+        rafCalls += 1;
+        cb();
+      },
+    });
+    const result = await controller.loadAll();
+
+    expect(result.items.length).toBe(120);
+    expect(view.appendedBatches.map((b) => b.length)).toEqual([50, 50, 20]);
+    expect(rafCalls).toBe(3);
+    // clearStatusとfirst-batchは最初のchunkのみ
+    expect(view.cleared).toBe(1);
+  });
+
   it('全件取得後に一度だけ確定順(更新日時降順→id昇順)でreorderする', async () => {
     const items = [
       makeItem('3', { updatedAt: '2026-09-01T00:00:00.000Z' }),

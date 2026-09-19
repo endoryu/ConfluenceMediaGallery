@@ -8,11 +8,12 @@
 import type { AttachmentSummary } from '../shared/types/media';
 import type { GalleryStatusState, GalleryView } from './gallery-controller';
 
-const KIND_LABEL: Record<AttachmentSummary['kind'], string> = {
-  image: '画像',
-  video: '動画',
-  audio: '音声',
-  unsupported: '-',
+/** 動画・音声は種別アイコン+汎用タイル(V1 §6.2/§2.1)。画像はWU-4でimgを載せる */
+const KIND_ICON: Record<AttachmentSummary['kind'], string> = {
+  image: '',
+  video: '▶',
+  audio: '♪',
+  unsupported: '',
 };
 
 export class GridView implements GalleryView {
@@ -75,8 +76,10 @@ export class GridView implements GalleryView {
       tile.dataset['attachmentId'] = item.attachmentId;
       tile.setAttribute('aria-label', item.title);
       const media = doc.createElement('span');
-      media.className = 'mg-tile-media';
-      media.textContent = KIND_LABEL[item.kind];
+      media.className = `mg-tile-media mg-tile-media--${item.kind}`;
+      media.textContent = KIND_ICON[item.kind];
+      media.setAttribute('aria-hidden', 'true'); // アクセシブル名はbutton側(title)
+
       const title = doc.createElement('span');
       title.className = 'mg-tile-title';
       title.textContent = item.title;
