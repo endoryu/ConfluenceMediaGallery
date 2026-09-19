@@ -10,7 +10,7 @@ import { DEFAULT_LIST_LIMIT, TILES_PER_FRAME } from '../shared/constants';
 import type { MediaModel } from './media-items';
 import { buildMediaModel, isGalleryItem } from './media-items';
 
-export type GalleryStatusState = 'loading' | 'error' | 'empty' | 'blocked';
+export type GalleryStatusState = 'loading' | 'error' | 'empty' | 'blocked' | 'forbidden';
 
 export interface GalleryView {
   showStatus(state: GalleryStatusState, message: string): void;
@@ -30,6 +30,8 @@ export interface GalleryControllerOptions {
   readonly limit?: number;
   /** 既定はrequestAnimationFrame。テストでは同期実行を注入する */
   readonly raf?: (callback: () => void) => void;
+  /** Blocked(429)表示の目安待機ms(rate-limit machineのRetry-After — §11.1.2) */
+  readonly retryAfterMs?: () => number;
   /** 表示対象を含む最初のページ応答を受けたとき(計測mark用) */
   readonly onFirstPage?: () => void;
   /** 最初のタイルbatchがDOMへ渡ったとき(計測mark用) */
@@ -51,6 +53,13 @@ export function compareGalleryOrder(a: AttachmentSummary, b: AttachmentSummary):
   const bTime = Date.parse(b.updatedAt ?? b.createdAt ?? '') || 0;
   if (aTime !== bTime) return bTime - aTime;
   return compareIdAsc(a.attachmentId, b.attachmentId);
+}
+
+/** adapterのthrowメッセージ(`Confluence API <status>`)からstatusを取り出す */
+function statusFromError(error: unknown): number | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const match = /Confluence API (\d{3})/.exec(error.message);
+  return match?.[1] ? Number(match[1]) : undefined;
 }
 
 /**
@@ -127,7 +136,7 @@ export class GalleryController {
       // 分類・thumb対応付け(WU-2)。一覧全件から対応表を構築する
       const model = buildMediaModel(raw);
       if (model.media.length === 0) {
-        view.showStatus('empty', 'このページにメディアの添付はありません');
+        view.showStatus('empty', '表示できる画像・動画・音声はありません');
         return { ok: true, items: [], model };
       }
       // 全件取得完了後に順序を確定する。再配置は一度(§6.1)
@@ -139,11 +148,25 @@ export class GalleryController {
       );
       return { ok: true, items, model };
     } catch (error) {
+      const status = statusFromError(error);
       onDiagnostic?.(
         'error',
         `gallery: 一覧取得失敗(${error instanceof Error ? error.message : 'unknown'})`,
       );
-      view.showStatus('error', '添付一覧を取得できませんでした');
+      // V1 §11の表: 401/403=権限不足、429=§11.1.2 cold start、途中失敗=取得済み維持
+      if (status === 401 || status === 403) {
+        view.showStatus('forbidden', '添付を表示する権限がありません');
+      } else if (status === 429) {
+        const seconds = Math.max(1, Math.ceil((this.options.retryAfterMs?.() ?? 60_000) / 1000));
+        view.showStatus(
+          'blocked',
+          `一覧を取得できませんでした(混雑中)。約${seconds}秒後に再読み込みできます`,
+        );
+      } else if (firstBatchDone) {
+        view.showStatus('error', '一部を取得できませんでした');
+      } else {
+        view.showStatus('error', '添付一覧を取得できませんでした');
+      }
       return { ok: false, items: [] };
     } finally {
       this.loading = false;

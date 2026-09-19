@@ -39,11 +39,12 @@ export class GridView implements GalleryView {
     this.status.dataset['state'] = state;
     this.status.textContent = message;
     this.removeRetryButton();
-    if (state === 'error') {
+    // error=Retry(§11の表)、blocked=手動再読み込み導線(§11.1.2/§11.1.3)
+    if (state === 'error' || state === 'blocked') {
       const retry = this.status.ownerDocument.createElement('button');
       retry.type = 'button';
       retry.className = 'mg-retry';
-      retry.textContent = '再試行';
+      retry.textContent = state === 'blocked' ? '再読み込み' : '再試行';
       retry.addEventListener('click', () => {
         this.onRetry();
       });
@@ -110,15 +111,18 @@ export class GridView implements GalleryView {
     return this.tilesById.get(attachmentId)?.querySelector<HTMLElement>('.mg-tile-media') ?? null;
   }
 
-  /** Thumbnail失敗のerror表示(V1 §11)。tile click=個別Retry(WU-4) */
-  setTileError(attachmentId: string): void {
+  /**
+   * Thumbnail失敗の表示(V1 §11: 種別別placeholder、タイトルは維持)。
+   * tile click=個別Retry(WU-4)
+   */
+  setTileError(attachmentId: string, kind: AttachmentSummary['kind'] = 'image'): void {
     const li = this.tilesById.get(attachmentId);
     const tile = li?.querySelector<HTMLButtonElement>('.mg-tile');
     const media = li?.querySelector<HTMLElement>('.mg-tile-media');
     if (!tile || !media) return;
     tile.dataset['error'] = '1';
     media.querySelector('img')?.remove();
-    media.textContent = '⚠';
+    media.textContent = kind === 'image' ? '□' : KIND_ICON[kind];
   }
 
   clearTileError(attachmentId: string): void {
