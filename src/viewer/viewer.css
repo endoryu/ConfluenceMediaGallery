@@ -108,3 +108,12 @@ body {
 .mgv-status[hidden] {
   display: none;
 }
+
+/* エラーfallbackの導線(§11: Retry/Originalを開く/ダウンロード) */
+.mgv-status a {
+  color: var(--mgv-focus);
+}
+
+.mgv-status button {
+  font-size: 13px;
+}
