@@ -44,7 +44,11 @@ export async function listAttachments(
   }));
 }
 
-export async function openGalleryFrame(page: Page, pageId: string): Promise<Frame> {
+export async function openGalleryFrame(
+  page: Page,
+  pageId: string,
+  readySelector = 'table', // phase0(probe UI)の既定。Phase 1以降は'.mg-grid'等を渡す
+): Promise<Frame> {
   await page.goto(`${SITE}/wiki/pages/viewpage.action?pageId=${pageId}`, {
     waitUntil: 'domcontentloaded',
   });
@@ -54,8 +58,8 @@ export async function openGalleryFrame(page: Page, pageId: string): Promise<Fram
       .frames()
       .find((f) => f.url().includes('cdn.prod.atlassian-dev.net') && f.url().includes('/gallery/'));
     if (frame) {
-      const table = frame.locator('table');
-      if ((await table.count()) > 0) return frame;
+      const ready = frame.locator(readySelector);
+      if ((await ready.count()) > 0) return frame;
     }
     if (Date.now() > deadline) throw new Error('gallery frame not found (macro未配置または未ロード)');
     await page.waitForTimeout(500);
@@ -70,6 +74,8 @@ export interface RecordedResponse {
   readonly contentLength?: string;
   readonly acceptRanges?: string;
   readonly requestRange?: string;
+  /** 要求を発行したframeのURL(host+path。ページ本体とmacro iframeの切り分け用) */
+  readonly frameHostPath?: string;
   readonly at: number;
   bodyBytes?: number;
 }
@@ -92,10 +98,17 @@ export class NetworkRecorder {
       const hostPath = stripToHostPath(response.url());
       if (!this.filter(hostPath)) return;
       const headers = response.headers();
+      let frameHostPath: string | undefined;
+      try {
+        frameHostPath = stripToHostPath(response.request().frame().url());
+      } catch {
+        frameHostPath = undefined; // worker等frame非帰属の要求
+      }
       const rec: RecordedResponse = {
         hostPath,
         status: response.status(),
         at: Date.now(),
+        ...(frameHostPath ? { frameHostPath } : {}),
         ...(headers['content-type'] ? { contentType: headers['content-type'] } : {}),
         ...(headers['content-range'] ? { contentRange: headers['content-range'] } : {}),
         ...(headers['content-length'] ? { contentLength: headers['content-length'] } : {}),
