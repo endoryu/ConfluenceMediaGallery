@@ -68,14 +68,13 @@ test('グリッドが§6.2を満たしCLS/long task 0で描画される', async 
   expect(gridInfo?.tileWidth ?? 0).toBeGreaterThanOrEqual(219); // 最小幅220(丸め誤差許容)
   expect(Math.abs((gridInfo?.tileRatio ?? 0) - 4 / 3)).toBeLessThan(0.02); // 4:3比率枠
 
-  // タイル操作: click/Enter/Space(§6.2)。エラーなく同期完了する
-  const pageErrors: string[] = [];
-  page.on('pageerror', (error) => pageErrors.push(error.message));
+  // タイルは操作対象のbutton(§6.2)。activation(click/Enter/Space→Viewer起動)の
+  // 実動作はPhase 2 spec(p2-1-launch)で検証する
   const tile = frame.locator('.mg-tile').first();
-  await tile.click();
-  await tile.press('Enter');
-  await tile.press('Space');
-  expect(pageErrors).toEqual([]);
+  await tile.focus();
+  expect(
+    await frame.evaluate(() => document.activeElement?.classList.contains('mg-tile')),
+  ).toBe(true);
 
   const perf = (await frame.evaluate(() => {
     const w = window as unknown as {
